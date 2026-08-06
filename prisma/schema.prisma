@@ -1,0 +1,906 @@
+// Prisma schema for Nestraa.
+// Source of truth: docs/nestraa-erp-architecture.md (section 4).
+// Table/column names and constraints mirror that document's SQL exactly;
+// Prisma-side names are camelCase/PascalCase for ergonomics via @map/@@map.
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pgcrypto]
+}
+
+// ---------------------------------------------------------------------------
+// 4.1 Enums
+// ---------------------------------------------------------------------------
+
+enum MaterialType {
+  raw
+  processed
+  packaging
+  finished_good
+
+  @@map("material_type")
+}
+
+enum BatchType {
+  grn
+  production
+  blend
+  packaging
+  finished_goods
+
+  @@map("batch_type")
+}
+
+enum MovementDirection {
+  in
+  out
+  adjustment
+
+  @@map("movement_direction")
+}
+
+enum MovementSource {
+  grn
+  production
+  blend
+  packaging
+  sale
+  purchase_return
+  sales_return
+  waste
+  manual_adjustment
+  transfer
+
+  @@map("movement_source")
+}
+
+enum OrderStatus {
+  draft
+  pending_approval
+  approved
+  in_progress
+  completed
+  cancelled
+
+  @@map("order_status")
+}
+
+enum CustomerType {
+  hotel
+  retail
+  wholesale
+  individual
+
+  @@map("customer_type")
+}
+
+enum PoStatus {
+  draft
+  sent
+  partially_received
+  received
+  closed
+  cancelled
+
+  @@map("po_status")
+}
+
+enum QcResult {
+  pass
+  fail
+  conditional_pass
+
+  @@map("qc_result")
+}
+
+// ---------------------------------------------------------------------------
+// 4.2 Users, Roles & Permissions
+// ---------------------------------------------------------------------------
+
+model Role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  rolePermissions RolePermission[]
+  users           AppUser[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String  @unique
+  description String?
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Uuid
+  permissionId String @map("permission_id") @db.Uuid
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// Mirrors Supabase auth.users (id matches auth.users.id) — not FK-enforced
+// in Prisma since auth.users lives in Supabase's own "auth" schema.
+model AppUser {
+  id        String   @id @db.Uuid
+  fullName  String   @map("full_name")
+  email     String   @unique
+  roleId    String?  @map("role_id") @db.Uuid
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  role Role? @relation(fields: [roleId], references: [id])
+
+  purchaseRequisitions   PurchaseRequisition[]
+  purchaseOrdersApproved PurchaseOrder[]       @relation("PoApprover")
+  purchaseOrdersCreated  PurchaseOrder[]       @relation("PoCreator")
+  goodsReceivedNotes     GoodsReceivedNote[]
+  batches                Batch[]
+  inventoryMovements     InventoryMovement[]
+  productionOrders       ProductionOrder[]
+  blendOrders            BlendOrder[]
+  packagingOrders        PackagingOrder[]
+  salesOrders            SalesOrder[]
+  salesInvoices          SalesInvoice[]
+  deliveryNotes          DeliveryNote[]
+  productionPlans        ProductionPlan[]
+  auditLogEntries        AuditLog[]
+
+  @@map("app_users")
+}
+
+// ---------------------------------------------------------------------------
+// 4.3 Master Data
+// ---------------------------------------------------------------------------
+
+model UnitOfMeasure {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String   @unique
+  name             String
+  baseUnitCode     String?  @map("base_unit_code")
+  conversionFactor Decimal? @map("conversion_factor") @db.Decimal(18, 6)
+
+  materials                Material[]
+  recipeIngredients        RecipeIngredient[]
+  purchaseRequisitionItems PurchaseRequisitionItem[]
+  purchaseOrderItems       PurchaseOrderItem[]
+  grnItems                 GrnItem[]
+  inventoryMovements       InventoryMovement[]
+  batches                  Batch[]
+  batchInputs              BatchInput[]
+  packageSizes             PackageSize[]
+  productionBatchDetails   ProductionBatchDetail[]
+
+  @@map("units_of_measure")
+}
+
+model Warehouse {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  location  String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  goodsReceivedNotes GoodsReceivedNote[]
+  inventoryMovements InventoryMovement[]
+  batches            Batch[]
+
+  @@map("warehouses")
+}
+
+model Supplier {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  contactPerson String?   @map("contact_person")
+  phone         String?
+  email         String?
+  address       String?
+  paymentTerms  String?   @map("payment_terms")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  purchaseOrders     PurchaseOrder[]
+  goodsReceivedNotes GoodsReceivedNote[]
+  supplierInvoices   SupplierInvoice[]
+  purchaseReturns    PurchaseReturn[]
+
+  @@map("suppliers")
+}
+
+model Customer {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  customerType  CustomerType @map("customer_type")
+  contactPerson String?      @map("contact_person")
+  phone         String?
+  email         String?
+  address       String?
+  creditLimit   Decimal      @default(0) @map("credit_limit") @db.Decimal(14, 2)
+  paymentTerms  String?      @map("payment_terms")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz
+
+  customerPricing CustomerPricing[]
+  salesOrders     SalesOrder[]
+  salesInvoices   SalesInvoice[]
+
+  @@map("customers")
+}
+
+model Brand {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String @unique
+
+  @@map("brands")
+}
+
+model Category {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String  @unique
+  parentCategoryId String? @map("parent_category_id") @db.Uuid
+
+  parent    Category?  @relation("CategoryToParent", fields: [parentCategoryId], references: [id])
+  children  Category[] @relation("CategoryToParent")
+  materials Material[]
+
+  @@map("categories")
+}
+
+// THE core master table: one row per material regardless of state.
+model Material {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sku           String       @unique
+  name          String
+  materialType  MaterialType @map("material_type")
+  categoryId    String?      @map("category_id") @db.Uuid
+  baseUomId     String       @map("base_uom_id") @db.Uuid
+  reorderLevel  Decimal      @default(0) @map("reorder_level") @db.Decimal(14, 3)
+  reorderQty    Decimal      @default(0) @map("reorder_qty") @db.Decimal(14, 3)
+  shelfLifeDays Int?         @map("shelf_life_days")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt     DateTime?    @map("deleted_at") @db.Timestamptz
+
+  category Category?     @relation(fields: [categoryId], references: [id])
+  baseUom  UnitOfMeasure @relation(fields: [baseUomId], references: [id])
+
+  recipesAsOutput            Recipe[]                      @relation("RecipeOutputMaterial")
+  recipeIngredients          RecipeIngredient[]
+  processesAsInput           ProductionProcessDefinition[] @relation("ProcessInputMaterial")
+  processesAsOutput          ProductionProcessDefinition[] @relation("ProcessOutputMaterial")
+  purchaseRequisitionItems   PurchaseRequisitionItem[]
+  purchaseOrderItems         PurchaseOrderItem[]
+  grnItems                   GrnItem[]
+  purchaseReturnItems        PurchaseReturnItem[]
+  inventoryMovements         InventoryMovement[]
+  batches                    Batch[]
+  productionOrdersAsOutput   ProductionOrder[]
+  packagingOrdersAsProcessed PackagingOrder[]              @relation("PackagingProcessedMaterial")
+  packagingOrdersAsFinished  PackagingOrder[]              @relation("PackagingFinishedProduct")
+  customerPricing            CustomerPricing[]
+  salesOrderItems            SalesOrderItem[]
+  salesInvoiceItems          SalesInvoiceItem[]
+  salesReturnItems           SalesReturnItem[]
+  productionPlanItems        ProductionPlanItem[]
+
+  @@map("materials")
+}
+
+model PackageSize {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  netWeight Decimal @map("net_weight") @db.Decimal(10, 3)
+  uomId     String  @map("uom_id") @db.Uuid
+
+  uom                 UnitOfMeasure        @relation(fields: [uomId], references: [id])
+  packagingOrders     PackagingOrder[]
+  productionPlanItems ProductionPlanItem[]
+
+  @@map("package_sizes")
+}
+
+// Recipe / BOM header
+model Recipe {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  outputMaterialId String   @map("output_material_id") @db.Uuid
+  version          Int      @default(1)
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  outputMaterial Material           @relation("RecipeOutputMaterial", fields: [outputMaterialId], references: [id])
+  ingredients    RecipeIngredient[]
+  blendOrders    BlendOrder[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipeId      String   @map("recipe_id") @db.Uuid
+  materialId    String   @map("material_id") @db.Uuid
+  percentage    Decimal? @db.Decimal(6, 3)
+  fixedQuantity Decimal? @map("fixed_quantity") @db.Decimal(14, 3)
+  uomId         String   @map("uom_id") @db.Uuid
+
+  recipe   Recipe        @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  material Material      @relation(fields: [materialId], references: [id])
+  uom      UnitOfMeasure @relation(fields: [uomId], references: [id])
+
+  @@map("recipe_ingredients")
+}
+
+model ProductionProcessDefinition {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  inputMaterialId  String?  @map("input_material_id") @db.Uuid
+  outputMaterialId String?  @map("output_material_id") @db.Uuid
+  expectedYieldPct Decimal? @map("expected_yield_pct") @db.Decimal(6, 3)
+  description      String?
+
+  inputMaterial  Material? @relation("ProcessInputMaterial", fields: [inputMaterialId], references: [id])
+  outputMaterial Material? @relation("ProcessOutputMaterial", fields: [outputMaterialId], references: [id])
+
+  productionOrders ProductionOrder[]
+
+  @@map("production_process_definitions")
+}
+
+// ---------------------------------------------------------------------------
+// 4.4 Procurement
+// ---------------------------------------------------------------------------
+
+model PurchaseRequisition {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requisitionNo String      @unique @map("requisition_no")
+  requestedBy   String?     @map("requested_by") @db.Uuid
+  status        OrderStatus @default(draft)
+  notes         String?
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  requester      AppUser?                  @relation(fields: [requestedBy], references: [id])
+  items          PurchaseRequisitionItem[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("purchase_requisitions")
+}
+
+model PurchaseRequisitionItem {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  requisitionId String  @map("requisition_id") @db.Uuid
+  materialId    String  @map("material_id") @db.Uuid
+  quantity      Decimal @db.Decimal(14, 3)
+  uomId         String  @map("uom_id") @db.Uuid
+
+  requisition PurchaseRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  material    Material            @relation(fields: [materialId], references: [id])
+  uom         UnitOfMeasure       @relation(fields: [uomId], references: [id])
+
+  @@map("purchase_requisition_items")
+}
+
+model PurchaseOrder {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  poNo          String    @unique @map("po_no")
+  supplierId    String    @map("supplier_id") @db.Uuid
+  requisitionId String?   @map("requisition_id") @db.Uuid
+  status        PoStatus  @default(draft)
+  orderDate     DateTime  @default(now()) @map("order_date") @db.Date
+  expectedDate  DateTime? @map("expected_date") @db.Date
+  approvedBy    String?   @map("approved_by") @db.Uuid
+  approvedAt    DateTime? @map("approved_at") @db.Timestamptz
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  supplier    Supplier             @relation(fields: [supplierId], references: [id])
+  requisition PurchaseRequisition? @relation(fields: [requisitionId], references: [id])
+  approver    AppUser?             @relation("PoApprover", fields: [approvedBy], references: [id])
+  creator     AppUser?             @relation("PoCreator", fields: [createdBy], references: [id])
+
+  items              PurchaseOrderItem[]
+  goodsReceivedNotes GoodsReceivedNote[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  poId        String  @map("po_id") @db.Uuid
+  materialId  String  @map("material_id") @db.Uuid
+  quantity    Decimal @db.Decimal(14, 3)
+  unitPrice   Decimal @map("unit_price") @db.Decimal(14, 4)
+  uomId       String  @map("uom_id") @db.Uuid
+  qtyReceived Decimal @default(0) @map("qty_received") @db.Decimal(14, 3)
+
+  po       PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  material Material      @relation(fields: [materialId], references: [id])
+  uom      UnitOfMeasure @relation(fields: [uomId], references: [id])
+
+  grnItems GrnItem[]
+
+  @@map("purchase_order_items")
+}
+
+model GoodsReceivedNote {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grnNo       String   @unique @map("grn_no")
+  poId        String?  @map("po_id") @db.Uuid
+  supplierId  String   @map("supplier_id") @db.Uuid
+  warehouseId String   @map("warehouse_id") @db.Uuid
+  receivedBy  String?  @map("received_by") @db.Uuid
+  receivedAt  DateTime @default(now()) @map("received_at") @db.Timestamptz
+  notes       String?
+
+  po        PurchaseOrder? @relation(fields: [poId], references: [id])
+  supplier  Supplier       @relation(fields: [supplierId], references: [id])
+  warehouse Warehouse      @relation(fields: [warehouseId], references: [id])
+  receiver  AppUser?       @relation(fields: [receivedBy], references: [id])
+
+  items            GrnItem[]
+  supplierInvoices SupplierInvoice[]
+  purchaseReturns  PurchaseReturn[]
+
+  @@map("goods_received_notes")
+}
+
+model GrnItem {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grnId      String    @map("grn_id") @db.Uuid
+  poItemId   String?   @map("po_item_id") @db.Uuid
+  materialId String    @map("material_id") @db.Uuid
+  quantity   Decimal   @db.Decimal(14, 3)
+  unitCost   Decimal   @map("unit_cost") @db.Decimal(14, 4)
+  uomId      String    @map("uom_id") @db.Uuid
+  qcResult   QcResult? @map("qc_result")
+  qcNotes    String?   @map("qc_notes")
+  batchId    String?   @map("batch_id") @db.Uuid
+
+  grn      GoodsReceivedNote  @relation(fields: [grnId], references: [id], onDelete: Cascade)
+  poItem   PurchaseOrderItem? @relation(fields: [poItemId], references: [id])
+  material Material           @relation(fields: [materialId], references: [id])
+  uom      UnitOfMeasure      @relation(fields: [uomId], references: [id])
+  batch    Batch?             @relation(fields: [batchId], references: [id])
+
+  @@map("grn_items")
+}
+
+model SupplierInvoice {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceNo   String   @map("invoice_no")
+  supplierId  String   @map("supplier_id") @db.Uuid
+  grnId       String?  @map("grn_id") @db.Uuid
+  invoiceDate DateTime @map("invoice_date") @db.Date
+  totalAmount Decimal  @map("total_amount") @db.Decimal(14, 2)
+  taxAmount   Decimal  @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  status      String   @default("unpaid")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  supplier Supplier           @relation(fields: [supplierId], references: [id])
+  grn      GoodsReceivedNote? @relation(fields: [grnId], references: [id])
+
+  @@map("supplier_invoices")
+}
+
+model PurchaseReturn {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnNo   String   @unique @map("return_no")
+  grnId      String?  @map("grn_id") @db.Uuid
+  supplierId String   @map("supplier_id") @db.Uuid
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  grn      GoodsReceivedNote?   @relation(fields: [grnId], references: [id])
+  supplier Supplier             @relation(fields: [supplierId], references: [id])
+  items    PurchaseReturnItem[]
+
+  @@map("purchase_returns")
+}
+
+model PurchaseReturnItem {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnId   String  @map("return_id") @db.Uuid
+  materialId String  @map("material_id") @db.Uuid
+  quantity   Decimal @db.Decimal(14, 3)
+
+  return   PurchaseReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  material Material       @relation(fields: [materialId], references: [id])
+
+  @@map("purchase_return_items")
+}
+
+// ---------------------------------------------------------------------------
+// 4.5 Inventory Ledger (the backbone)
+// ---------------------------------------------------------------------------
+
+model InventoryMovement {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materialId        String            @map("material_id") @db.Uuid
+  batchId           String?           @map("batch_id") @db.Uuid
+  warehouseId       String            @map("warehouse_id") @db.Uuid
+  direction         MovementDirection
+  quantity          Decimal           @db.Decimal(14, 3)
+  uomId             String            @map("uom_id") @db.Uuid
+  source            MovementSource
+  sourceReferenceId String?           @map("source_reference_id") @db.Uuid
+  unitCost          Decimal?          @map("unit_cost") @db.Decimal(14, 4)
+  notes             String?
+  createdBy         String?           @map("created_by") @db.Uuid
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  material  Material      @relation(fields: [materialId], references: [id])
+  batch     Batch?        @relation(fields: [batchId], references: [id])
+  warehouse Warehouse     @relation(fields: [warehouseId], references: [id])
+  uom       UnitOfMeasure @relation(fields: [uomId], references: [id])
+  creator   AppUser?      @relation(fields: [createdBy], references: [id])
+
+  @@index([materialId, warehouseId], name: "idx_movements_material_wh")
+  @@index([batchId], name: "idx_movements_batch")
+  @@index([createdAt], name: "idx_movements_created_at")
+  @@map("inventory_movements")
+}
+
+// ---------------------------------------------------------------------------
+// 4.6 Batches — the traceability spine
+// ---------------------------------------------------------------------------
+
+model Batch {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchNo         String    @unique @map("batch_no")
+  batchType       BatchType @map("batch_type")
+  materialId      String    @map("material_id") @db.Uuid
+  warehouseId     String    @map("warehouse_id") @db.Uuid
+  quantity        Decimal   @db.Decimal(14, 3)
+  uomId           String    @map("uom_id") @db.Uuid
+  unitCost        Decimal?  @map("unit_cost") @db.Decimal(14, 4)
+  manufactureDate DateTime? @map("manufacture_date") @db.Date
+  expiryDate      DateTime? @map("expiry_date") @db.Date
+  qcResult        QcResult? @map("qc_result")
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  material  Material      @relation(fields: [materialId], references: [id])
+  warehouse Warehouse     @relation(fields: [warehouseId], references: [id])
+  uom       UnitOfMeasure @relation(fields: [uomId], references: [id])
+  creator   AppUser?      @relation(fields: [createdBy], references: [id])
+
+  grnItems           GrnItem[]
+  inventoryMovements InventoryMovement[]
+  outputOf           BatchInput[]        @relation("OutputBatch")
+  inputTo            BatchInput[]        @relation("InputBatch")
+
+  productionBatchDetail ProductionBatchDetail?
+  blendBatchDetail      BlendBatchDetail?
+  packagingBatchDetail  PackagingBatchDetail?
+  salesInvoiceItems     SalesInvoiceItem[]
+
+  @@map("batches")
+}
+
+// Many-to-many: a batch can consume multiple input batches (blends do this),
+// and one input batch can feed multiple output batches.
+model BatchInput {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  outputBatchId    String  @map("output_batch_id") @db.Uuid
+  inputBatchId     String  @map("input_batch_id") @db.Uuid
+  quantityConsumed Decimal @map("quantity_consumed") @db.Decimal(14, 3)
+  uomId            String  @map("uom_id") @db.Uuid
+
+  outputBatch Batch         @relation("OutputBatch", fields: [outputBatchId], references: [id], onDelete: Cascade)
+  inputBatch  Batch         @relation("InputBatch", fields: [inputBatchId], references: [id])
+  uom         UnitOfMeasure @relation(fields: [uomId], references: [id])
+
+  @@index([outputBatchId], name: "idx_batch_inputs_output")
+  @@index([inputBatchId], name: "idx_batch_inputs_input")
+  @@map("batch_inputs")
+}
+
+// ---------------------------------------------------------------------------
+// 4.7 Production, Blend & Packaging Orders
+// ---------------------------------------------------------------------------
+
+model ProductionOrder {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNo          String      @unique @map("order_no")
+  processId        String?     @map("process_id") @db.Uuid
+  outputMaterialId String      @map("output_material_id") @db.Uuid
+  plannedQuantity  Decimal     @map("planned_quantity") @db.Decimal(14, 3)
+  status           OrderStatus @default(draft)
+  plannedStartDate DateTime?   @map("planned_start_date") @db.Date
+  createdBy        String?     @map("created_by") @db.Uuid
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  process        ProductionProcessDefinition? @relation(fields: [processId], references: [id])
+  outputMaterial Material                     @relation(fields: [outputMaterialId], references: [id])
+  creator        AppUser?                     @relation(fields: [createdBy], references: [id])
+
+  batchDetails        ProductionBatchDetail[]
+  productionPlanItems ProductionPlanItem[]
+
+  @@map("production_orders")
+}
+
+// Production batch IS a row in `batches` (batch_type = 'production').
+// This table just holds production-specific metadata.
+model ProductionBatchDetail {
+  batchId           String   @id @map("batch_id") @db.Uuid
+  productionOrderId String?  @map("production_order_id") @db.Uuid
+  wasteQuantity     Decimal  @default(0) @map("waste_quantity") @db.Decimal(14, 3)
+  wasteUomId        String?  @map("waste_uom_id") @db.Uuid
+  wasteReason       String?  @map("waste_reason")
+  expectedYieldPct  Decimal? @map("expected_yield_pct") @db.Decimal(6, 3)
+  actualYieldPct    Decimal? @map("actual_yield_pct") @db.Decimal(6, 3)
+
+  batch           Batch            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  productionOrder ProductionOrder? @relation(fields: [productionOrderId], references: [id])
+  wasteUom        UnitOfMeasure?   @relation(fields: [wasteUomId], references: [id])
+
+  @@map("production_batch_details")
+}
+
+model BlendOrder {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNo         String      @unique @map("order_no")
+  recipeId        String      @map("recipe_id") @db.Uuid
+  plannedQuantity Decimal     @map("planned_quantity") @db.Decimal(14, 3)
+  status          OrderStatus @default(draft)
+  createdBy       String?     @map("created_by") @db.Uuid
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  recipe  Recipe   @relation(fields: [recipeId], references: [id])
+  creator AppUser? @relation(fields: [createdBy], references: [id])
+
+  batchDetails        BlendBatchDetail[]
+  productionPlanItems ProductionPlanItem[]
+
+  @@map("blend_orders")
+}
+
+model BlendBatchDetail {
+  batchId      String  @id @map("batch_id") @db.Uuid
+  blendOrderId String? @map("blend_order_id") @db.Uuid
+
+  batch      Batch       @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  blendOrder BlendOrder? @relation(fields: [blendOrderId], references: [id])
+
+  @@map("blend_batch_details")
+}
+
+model PackagingOrder {
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNo             String      @unique @map("order_no")
+  processedMaterialId String      @map("processed_material_id") @db.Uuid
+  finishedProductId   String      @map("finished_product_id") @db.Uuid
+  packageSizeId       String      @map("package_size_id") @db.Uuid
+  plannedQuantity     Decimal     @map("planned_quantity") @db.Decimal(14, 3)
+  status              OrderStatus @default(draft)
+  createdBy           String?     @map("created_by") @db.Uuid
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  processedMaterial Material    @relation("PackagingProcessedMaterial", fields: [processedMaterialId], references: [id])
+  finishedProduct   Material    @relation("PackagingFinishedProduct", fields: [finishedProductId], references: [id])
+  packageSize       PackageSize @relation(fields: [packageSizeId], references: [id])
+  creator           AppUser?    @relation(fields: [createdBy], references: [id])
+
+  batchDetails        PackagingBatchDetail[]
+  productionPlanItems ProductionPlanItem[]
+
+  @@map("packaging_orders")
+}
+
+model PackagingBatchDetail {
+  batchId          String    @id @map("batch_id") @db.Uuid
+  packagingOrderId String?   @map("packaging_order_id") @db.Uuid
+  barcode          String?   @unique
+  manufactureDate  DateTime? @map("manufacture_date") @db.Date
+  expiryDate       DateTime? @map("expiry_date") @db.Date
+
+  batch          Batch           @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  packagingOrder PackagingOrder? @relation(fields: [packagingOrderId], references: [id])
+
+  @@map("packaging_batch_details")
+}
+
+// ---------------------------------------------------------------------------
+// 4.8 Sales
+// ---------------------------------------------------------------------------
+
+model CustomerPricing {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId    String    @map("customer_id") @db.Uuid
+  materialId    String    @map("material_id") @db.Uuid
+  unitPrice     Decimal   @map("unit_price") @db.Decimal(14, 4)
+  effectiveFrom DateTime  @default(now()) @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@map("customer_pricing")
+}
+
+model SalesOrder {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNo    String      @unique @map("order_no")
+  customerId String      @map("customer_id") @db.Uuid
+  status     OrderStatus @default(draft)
+  orderDate  DateTime    @default(now()) @map("order_date") @db.Date
+  createdBy  String?     @map("created_by") @db.Uuid
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  creator  AppUser? @relation(fields: [createdBy], references: [id])
+
+  items         SalesOrderItem[]
+  salesInvoices SalesInvoice[]
+
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  salesOrderId String  @map("sales_order_id") @db.Uuid
+  materialId   String  @map("material_id") @db.Uuid
+  quantity     Decimal @db.Decimal(14, 3)
+  unitPrice    Decimal @map("unit_price") @db.Decimal(14, 4)
+  discountPct  Decimal @default(0) @map("discount_pct") @db.Decimal(6, 3)
+
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  material   Material   @relation(fields: [materialId], references: [id])
+
+  @@map("sales_order_items")
+}
+
+model SalesInvoice {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceNo    String   @unique @map("invoice_no")
+  salesOrderId String?  @map("sales_order_id") @db.Uuid
+  customerId   String   @map("customer_id") @db.Uuid
+  invoiceDate  DateTime @default(now()) @map("invoice_date") @db.Date
+  totalAmount  Decimal  @map("total_amount") @db.Decimal(14, 2)
+  taxAmount    Decimal  @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  status       String   @default("unpaid")
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  salesOrder SalesOrder? @relation(fields: [salesOrderId], references: [id])
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  creator    AppUser?    @relation(fields: [createdBy], references: [id])
+
+  items         SalesInvoiceItem[]
+  deliveryNotes DeliveryNote[]
+  salesReturns  SalesReturn[]
+
+  @@map("sales_invoices")
+}
+
+model SalesInvoiceItem {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  invoiceId  String  @map("invoice_id") @db.Uuid
+  materialId String  @map("material_id") @db.Uuid
+  batchId    String? @map("batch_id") @db.Uuid
+  quantity   Decimal @db.Decimal(14, 3)
+  unitPrice  Decimal @map("unit_price") @db.Decimal(14, 4)
+
+  invoice  SalesInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  material Material     @relation(fields: [materialId], references: [id])
+  batch    Batch?       @relation(fields: [batchId], references: [id])
+
+  @@map("sales_invoice_items")
+}
+
+model DeliveryNote {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  deliveryNo  String    @unique @map("delivery_no")
+  invoiceId   String?   @map("invoice_id") @db.Uuid
+  deliveredAt DateTime? @map("delivered_at") @db.Timestamptz
+  deliveredBy String?   @map("delivered_by") @db.Uuid
+
+  invoice   SalesInvoice? @relation(fields: [invoiceId], references: [id])
+  deliverer AppUser?      @relation(fields: [deliveredBy], references: [id])
+
+  @@map("delivery_notes")
+}
+
+model SalesReturn {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnNo  String   @unique @map("return_no")
+  invoiceId String?  @map("invoice_id") @db.Uuid
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  invoice SalesInvoice?     @relation(fields: [invoiceId], references: [id])
+  items   SalesReturnItem[]
+
+  @@map("sales_returns")
+}
+
+model SalesReturnItem {
+  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnId   String  @map("return_id") @db.Uuid
+  materialId String  @map("material_id") @db.Uuid
+  quantity   Decimal @db.Decimal(14, 3)
+
+  return   SalesReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  material Material    @relation(fields: [materialId], references: [id])
+
+  @@map("sales_return_items")
+}
+
+// ---------------------------------------------------------------------------
+// 4.9 Production Planning
+// ---------------------------------------------------------------------------
+
+model ProductionPlan {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planName    String      @map("plan_name")
+  periodStart DateTime    @map("period_start") @db.Date
+  periodEnd   DateTime    @map("period_end") @db.Date
+  status      OrderStatus @default(draft)
+  createdBy   String?     @map("created_by") @db.Uuid
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  creator AppUser?             @relation(fields: [createdBy], references: [id])
+  items   ProductionPlanItem[]
+
+  @@map("production_plans")
+}
+
+model ProductionPlanItem {
+  id                         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId                     String  @map("plan_id") @db.Uuid
+  finishedProductId          String  @map("finished_product_id") @db.Uuid
+  packageSizeId              String? @map("package_size_id") @db.Uuid
+  plannedQty                 Decimal @map("planned_qty") @db.Decimal(14, 3)
+  suggestedProductionOrderId String? @map("suggested_production_order_id") @db.Uuid
+  suggestedBlendOrderId      String? @map("suggested_blend_order_id") @db.Uuid
+  suggestedPackagingOrderId  String? @map("suggested_packaging_order_id") @db.Uuid
+
+  plan                     ProductionPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  finishedProduct          Material         @relation(fields: [finishedProductId], references: [id])
+  packageSize              PackageSize?     @relation(fields: [packageSizeId], references: [id])
+  suggestedProductionOrder ProductionOrder? @relation(fields: [suggestedProductionOrderId], references: [id])
+  suggestedBlendOrder      BlendOrder?      @relation(fields: [suggestedBlendOrderId], references: [id])
+  suggestedPackagingOrder  PackagingOrder?  @relation(fields: [suggestedPackagingOrderId], references: [id])
+
+  @@map("production_plan_items")
+}
+
+// ---------------------------------------------------------------------------
+// 4.10 Audit Log
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tableName String   @map("table_name")
+  recordId  String   @map("record_id") @db.Uuid
+  action    String
+  changedBy String?  @map("changed_by") @db.Uuid
+  oldValues Json?    @map("old_values")
+  newValues Json?    @map("new_values")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  changer AppUser? @relation(fields: [changedBy], references: [id])
+
+  @@index([tableName, recordId], name: "idx_audit_table_record")
+  @@map("audit_log")
+}
