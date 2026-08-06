@@ -1,0 +1,26 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { createPurchaseOrder, listPurchaseOrders } from "@/lib/services/purchase-orders";
+import { purchaseOrderSchema } from "@/lib/validation/purchase-orders";
+import { getCurrentAppUser } from "@/lib/services/current-user";
+import { toErrorResponse } from "@/lib/api/errors";
+
+export async function GET() {
+  const purchaseOrders = await listPurchaseOrders();
+  return NextResponse.json(purchaseOrders);
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const parsed = purchaseOrderSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  try {
+    const currentUser = await getCurrentAppUser();
+    const purchaseOrder = await createPurchaseOrder({ ...parsed.data, createdBy: currentUser?.id });
+    return NextResponse.json(purchaseOrder, { status: 201 });
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}

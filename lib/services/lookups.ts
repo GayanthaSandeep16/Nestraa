@@ -7,3 +7,7 @@ export function listUnitsOfMeasure() {
 export function listCategories() {
   return prisma.category.findMany({ orderBy: { name: "asc" } });
 }
+
+export function listWarehouses() {
+  return prisma.warehouse.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
+}

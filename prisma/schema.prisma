@@ -99,6 +99,14 @@ enum QcResult {
   @@map("qc_result")
 }
 
+enum GrnProcessingPath {
+  ready_for_packaging
+  requires_processing
+  requires_blending
+
+  @@map("grn_processing_path")
+}
+
 // ---------------------------------------------------------------------------
 // 4.2 Users, Roles & Permissions
 // ---------------------------------------------------------------------------
@@ -463,16 +471,17 @@ model GoodsReceivedNote {
 }
 
 model GrnItem {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  grnId      String    @map("grn_id") @db.Uuid
-  poItemId   String?   @map("po_item_id") @db.Uuid
-  materialId String    @map("material_id") @db.Uuid
-  quantity   Decimal   @db.Decimal(14, 3)
-  unitCost   Decimal   @map("unit_cost") @db.Decimal(14, 4)
-  uomId      String    @map("uom_id") @db.Uuid
-  qcResult   QcResult? @map("qc_result")
-  qcNotes    String?   @map("qc_notes")
-  batchId    String?   @map("batch_id") @db.Uuid
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grnId          String             @map("grn_id") @db.Uuid
+  poItemId       String?            @map("po_item_id") @db.Uuid
+  materialId     String             @map("material_id") @db.Uuid
+  quantity       Decimal            @db.Decimal(14, 3)
+  unitCost       Decimal            @map("unit_cost") @db.Decimal(14, 4)
+  uomId          String             @map("uom_id") @db.Uuid
+  qcResult       QcResult?          @map("qc_result")
+  qcNotes        String?            @map("qc_notes")
+  batchId        String?            @map("batch_id") @db.Uuid
+  processingPath GrnProcessingPath? @map("processing_path")
 
   grn      GoodsReceivedNote  @relation(fields: [grnId], references: [id], onDelete: Cascade)
   poItem   PurchaseOrderItem? @relation(fields: [poItemId], references: [id])
