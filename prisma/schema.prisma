@@ -21,7 +21,6 @@ datasource db {
 enum MaterialType {
   raw
   processed
-  packaging
   finished_good
 
   @@map("material_type")

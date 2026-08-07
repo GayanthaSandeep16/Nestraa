@@ -31,7 +31,6 @@ interface Lookups {
 }
 
 const emptyValues: ProductFormValues = {
-  sku: "",
   name: "",
   categoryId: "",
   baseUomId: "",
@@ -46,6 +45,7 @@ export function ProductPanel() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSku, setEditingSku] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -80,6 +80,7 @@ export function ProductPanel() {
 
   function openCreateForm() {
     setEditingId(null);
+    setEditingSku(null);
     setFormError(null);
     reset(emptyValues);
     setFormOpen(true);
@@ -87,9 +88,9 @@ export function ProductPanel() {
 
   function openEditForm(product: Product) {
     setEditingId(product.id);
+    setEditingSku(product.sku);
     setFormError(null);
     reset({
-      sku: product.sku,
       name: product.name,
       categoryId: product.categoryId ?? "",
       baseUomId: product.baseUomId,
@@ -103,6 +104,7 @@ export function ProductPanel() {
   function closeForm() {
     setFormOpen(false);
     setEditingId(null);
+    setEditingSku(null);
     setFormError(null);
   }
 
@@ -201,11 +203,12 @@ export function ProductPanel() {
           </div>
 
           <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
-            <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
-              SKU *
-              <Input {...register("sku")} error={!!errors.sku} />
-              {errors.sku && <span className="text-body-sm text-error">{errors.sku.message}</span>}
-            </label>
+            {editingSku && (
+              <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
+                SKU
+                <Input value={editingSku} disabled readOnly />
+              </label>
+            )}
 
             <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
               Name *

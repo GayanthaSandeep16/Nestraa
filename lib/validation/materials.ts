@@ -1,9 +1,8 @@
 import { z } from "zod";
 
-export const materialTypeValues = ["raw", "processed", "packaging", "finished_good"] as const;
+export const materialTypeValues = ["raw", "processed", "finished_good"] as const;
 
 export const materialSchema = z.object({
-  sku: z.string().min(1, "SKU is required"),
   name: z.string().min(1, "Name is required"),
   materialType: z.enum(materialTypeValues),
   categoryId: z

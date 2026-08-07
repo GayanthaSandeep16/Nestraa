@@ -14,7 +14,6 @@ import { materialSchema, materialTypeValues, type MaterialFormValues } from "@/l
 const materialTypeLabels: Record<(typeof materialTypeValues)[number], string> = {
   raw: "Raw",
   processed: "Processed",
-  packaging: "Packaging",
   finished_good: "Finished Good",
 };
 
@@ -39,7 +38,6 @@ interface Lookups {
 }
 
 const emptyValues: MaterialFormValues = {
-  sku: "",
   name: "",
   materialType: "raw",
   categoryId: "",
@@ -55,6 +53,7 @@ export function MaterialPanel() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSku, setEditingSku] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -89,6 +88,7 @@ export function MaterialPanel() {
 
   function openCreateForm() {
     setEditingId(null);
+    setEditingSku(null);
     setFormError(null);
     reset(emptyValues);
     setFormOpen(true);
@@ -96,9 +96,9 @@ export function MaterialPanel() {
 
   function openEditForm(material: Material) {
     setEditingId(material.id);
+    setEditingSku(material.sku);
     setFormError(null);
     reset({
-      sku: material.sku,
       name: material.name,
       materialType: material.materialType,
       categoryId: material.categoryId ?? "",
@@ -113,6 +113,7 @@ export function MaterialPanel() {
   function closeForm() {
     setFormOpen(false);
     setEditingId(null);
+    setEditingSku(null);
     setFormError(null);
   }
 
@@ -212,11 +213,12 @@ export function MaterialPanel() {
           </div>
 
           <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
-            <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
-              SKU *
-              <Input {...register("sku")} error={!!errors.sku} />
-              {errors.sku && <span className="text-body-sm text-error">{errors.sku.message}</span>}
-            </label>
+            {editingSku && (
+              <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
+                SKU
+                <Input value={editingSku} disabled readOnly />
+              </label>
+            )}
 
             <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
               Name *

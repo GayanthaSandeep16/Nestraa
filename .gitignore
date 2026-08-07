@@ -55,4 +55,5 @@ next-env.d.ts
 /.claude/
 /.windsurf/
 /.agents/
+/graphify-out
 skills-lock.json

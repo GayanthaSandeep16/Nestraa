@@ -17,7 +17,6 @@ export function getMaterial(id: string) {
 }
 
 export interface MaterialInput {
-  sku: string;
   name: string;
   materialType: MaterialType;
   categoryId?: string | null;
@@ -27,8 +26,35 @@ export interface MaterialInput {
   shelfLifeDays?: number | null;
 }
 
-export function createMaterial(data: MaterialInput) {
-  return prisma.material.create({ data });
+const skuTypePrefixes: Record<MaterialType, string> = {
+  raw: "RAW",
+  processed: "PRO",
+  finished_good: "FG",
+};
+
+export async function generateSku(materialType: MaterialType, name: string) {
+  const letters = (name.match(/[A-Za-z]/g) ?? [])
+    .slice(0, 3)
+    .join("")
+    .toUpperCase()
+    .padEnd(3, "X");
+  const prefix = `${skuTypePrefixes[materialType]}-${letters}-`;
+
+  const existing = await prisma.material.findMany({
+    where: { sku: { startsWith: prefix } },
+    select: { sku: true },
+  });
+  const maxSeq = existing.reduce((max, m) => {
+    const n = parseInt(m.sku.slice(prefix.length), 10);
+    return Number.isFinite(n) && n > max ? n : max;
+  }, 0);
+
+  return `${prefix}${String(maxSeq + 1).padStart(3, "0")}`;
+}
+
+export async function createMaterial(data: MaterialInput) {
+  const sku = await generateSku(data.materialType, data.name);
+  return prisma.material.create({ data: { ...data, sku } });
 }
 
 export function updateMaterial(id: string, data: Partial<MaterialInput> & { isActive?: boolean }) {

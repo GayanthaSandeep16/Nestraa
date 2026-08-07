@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export const productSchema = z.object({
-  sku: z.string().min(1, "SKU is required"),
   name: z.string().min(1, "Name is required"),
   categoryId: z
     .union([z.string().uuid(), z.literal("")])

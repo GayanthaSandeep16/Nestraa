@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
-import { listCategories, listUnitsOfMeasure, listWarehouses } from "@/lib/services/lookups";
+import {
+  listCategories,
+  listPackageSizes,
+  listUnitsOfMeasure,
+  listWarehouses,
+} from "@/lib/services/lookups";
 
 export async function GET() {
-  const [unitsOfMeasure, categories, warehouses] = await Promise.all([
+  const [unitsOfMeasure, categories, warehouses, packageSizes] = await Promise.all([
     listUnitsOfMeasure(),
     listCategories(),
     listWarehouses(),
+    listPackageSizes(),
   ]);
-  return NextResponse.json({ unitsOfMeasure, categories, warehouses });
+  return NextResponse.json({ unitsOfMeasure, categories, warehouses, packageSizes });
 }

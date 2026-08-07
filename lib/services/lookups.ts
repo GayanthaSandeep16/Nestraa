@@ -11,3 +11,7 @@ export function listCategories() {
 export function listWarehouses() {
   return prisma.warehouse.findMany({ where: { isActive: true }, orderBy: { name: "asc" } });
 }
+
+export function listPackageSizes() {
+  return prisma.packageSize.findMany({ include: { uom: true }, orderBy: { name: "asc" } });
+}

@@ -98,6 +98,29 @@ export function listMovements(filters?: MovementFilters) {
   });
 }
 
+export async function getAvailableBatches(materialId: string, warehouseId?: string) {
+  const batches = await prisma.batch.findMany({
+    where: { materialId, warehouseId, deletedAt: null },
+    include: { uom: true, warehouse: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const consumed = await prisma.inventoryMovement.groupBy({
+    by: ["batchId"],
+    where: { batchId: { in: batches.map((batch) => batch.id) }, direction: "out" },
+    _sum: { quantity: true },
+  });
+
+  const consumedByBatch = new Map(consumed.map((row) => [row.batchId, row._sum.quantity ?? new Prisma.Decimal(0)]));
+
+  return batches
+    .map((batch) => ({
+      ...batch,
+      remainingQuantity: batch.quantity.sub(consumedByBatch.get(batch.id) ?? new Prisma.Decimal(0)),
+    }))
+    .filter((batch) => batch.remainingQuantity.gt(0));
+}
+
 interface LineageRow {
   batch_id: string;
   batch_no: string;

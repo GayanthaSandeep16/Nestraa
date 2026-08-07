@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { generateSku } from "@/lib/services/materials";
 
 export function listProducts() {
   return prisma.material.findMany({
@@ -16,7 +17,6 @@ export function getProduct(id: string) {
 }
 
 export interface ProductInput {
-  sku: string;
   name: string;
   categoryId?: string | null;
   baseUomId: string;
@@ -25,8 +25,9 @@ export interface ProductInput {
   shelfLifeDays?: number | null;
 }
 
-export function createProduct(data: ProductInput) {
-  return prisma.material.create({ data: { ...data, materialType: "finished_good" } });
+export async function createProduct(data: ProductInput) {
+  const sku = await generateSku("finished_good", data.name);
+  return prisma.material.create({ data: { ...data, sku, materialType: "finished_good" } });
 }
 
 export function updateProduct(id: string, data: Partial<ProductInput> & { isActive?: boolean }) {
