@@ -8,6 +8,7 @@ import {
   Package,
   Receipt,
   CalendarClock,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,5 +32,6 @@ export const navItems: NavItem[] = [
   { href: "/production", label: "Production & Blend Orders", icon: FlaskConical, group: "Operations" },
   { href: "/packaging", label: "Packaging Orders", icon: Package, group: "Operations" },
   { href: "/sales", label: "Sales & Invoicing", icon: Receipt, group: "Operations" },
+  { href: "/reports", label: "Reports", icon: BarChart3, group: "Operations" },
   { href: "/planning", label: "Production Planning", icon: CalendarClock, group: "Operations" },
 ];
