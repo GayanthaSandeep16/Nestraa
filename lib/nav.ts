@@ -11,6 +11,7 @@ import {
   BarChart3,
   type LucideIcon,
 } from "lucide-react";
+import type { ModuleKey } from "@/lib/auth/roles";
 
 export type NavGroup = "Setup" | "Operations";
 
@@ -19,19 +20,20 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   group?: NavGroup;
+  moduleKey: ModuleKey;
 }
 
 export const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, moduleKey: "dashboard" },
 
-  { href: "/suppliers-materials", label: "Suppliers & Materials", icon: BookOpen, group: "Setup" },
-  { href: "/product-catalog", label: "Product Catalog & BOM", icon: Factory, group: "Setup" },
+  { href: "/suppliers-materials", label: "Suppliers & Materials", icon: BookOpen, group: "Setup", moduleKey: "suppliers-materials" },
+  { href: "/product-catalog", label: "Product Catalog & BOM", icon: Factory, group: "Setup", moduleKey: "product-catalog" },
 
-  { href: "/procurement", label: "Procurement & GRN", icon: ShoppingCart, group: "Operations" },
-  { href: "/inventory", label: "Inventory Ledger", icon: Warehouse, group: "Operations" },
-  { href: "/production", label: "Production & Blend Orders", icon: FlaskConical, group: "Operations" },
-  { href: "/packaging", label: "Packaging Orders", icon: Package, group: "Operations" },
-  { href: "/sales", label: "Sales & Invoicing", icon: Receipt, group: "Operations" },
-  { href: "/reports", label: "Reports", icon: BarChart3, group: "Operations" },
-  { href: "/planning", label: "Production Planning", icon: CalendarClock, group: "Operations" },
+  { href: "/procurement", label: "Procurement & GRN", icon: ShoppingCart, group: "Operations", moduleKey: "procurement" },
+  { href: "/inventory", label: "Inventory Ledger", icon: Warehouse, group: "Operations", moduleKey: "inventory" },
+  { href: "/production", label: "Production & Blend Orders", icon: FlaskConical, group: "Operations", moduleKey: "production" },
+  { href: "/packaging", label: "Packaging Orders", icon: Package, group: "Operations", moduleKey: "packaging" },
+  { href: "/sales", label: "Sales & Invoicing", icon: Receipt, group: "Operations", moduleKey: "sales" },
+  { href: "/reports", label: "Reports", icon: BarChart3, group: "Operations", moduleKey: "reports" },
+  { href: "/planning", label: "Production Planning", icon: CalendarClock, group: "Operations", moduleKey: "planning" },
 ];

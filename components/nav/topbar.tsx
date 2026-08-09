@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import { Search, Bell, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Search, Bell, User, LogOut } from "lucide-react";
 import { navItems } from "@/lib/nav";
+import { createClient } from "@/lib/supabase/client";
 
 function titleForPathname(pathname: string) {
   const match = navItems.find((item) =>
@@ -12,11 +13,19 @@ function titleForPathname(pathname: string) {
   return match?.label ?? "Dashboard";
 }
 
-export function Topbar() {
+export function Topbar({ userName, roleName }: { userName: string; roleName: string | null }) {
   const pathname = usePathname();
+  const router = useRouter();
   const title = titleForPathname(pathname);
   const [query, setQuery] = useState("");
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.replace("/login");
+    router.refresh();
+  }
 
   useEffect(() => {
     debounceTimer.current = setTimeout(() => {
@@ -52,9 +61,26 @@ export function Topbar() {
           <Bell size={18} />
         </button>
 
-        <div className="flex items-center justify-center size-9 rounded-full bg-surface-container text-on-surface-variant">
-          <User size={18} />
+        <div className="flex items-center gap-xs">
+          <div className="flex items-center justify-center size-9 rounded-full bg-surface-container text-on-surface-variant">
+            <User size={18} />
+          </div>
+          <div className="hidden sm:flex flex-col leading-tight">
+            <span className="text-body-sm text-on-surface">{userName}</span>
+            {roleName && (
+              <span className="text-label-sm text-on-surface-variant capitalize">{roleName}</span>
+            )}
+          </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleSignOut}
+          aria-label="Sign out"
+          className="flex items-center justify-center size-9 rounded-full text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </header>
   );

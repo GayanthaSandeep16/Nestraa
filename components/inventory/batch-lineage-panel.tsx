@@ -74,7 +74,7 @@ export function BatchLineagePanel() {
           value={batchNo}
           onChange={(e) => setBatchNo(e.target.value)}
           placeholder="Enter batch number (e.g. GRN-...)"
-          className="max-w-sm"
+          className="max-w-[24rem]"
         />
         <Button type="submit" disabled={loading}>
           <Search size={16} />

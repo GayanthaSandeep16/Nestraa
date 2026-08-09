@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { deleteRecipe, updateRecipe } from "@/lib/services/recipes";
 import { recipeUpdateSchema } from "@/lib/validation/recipes";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/recipes/[id]">) {
+async function handlePATCH(request: NextRequest, ctx: RouteContext<"/api/recipes/[id]">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = recipeUpdateSchema.safeParse(body);
@@ -19,8 +20,11 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/recipe
   }
 }
 
-export async function DELETE(_request: NextRequest, ctx: RouteContext<"/api/recipes/[id]">) {
+async function handleDELETE(_request: NextRequest, ctx: RouteContext<"/api/recipes/[id]">) {
   const { id } = await ctx.params;
   await deleteRecipe(id);
   return new NextResponse(null, { status: 204 });
 }
+
+export const PATCH = withModuleAccess("product-catalog", handlePATCH);
+export const DELETE = withModuleAccess("product-catalog", handleDELETE);

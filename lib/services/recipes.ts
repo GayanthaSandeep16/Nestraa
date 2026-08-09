@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 
 export function listRecipes() {
   return prisma.recipe.findMany({
-    include: { outputMaterial: true, ingredients: true },
+    include: { outputMaterial: true, ingredients: { include: { material: true, uom: true } } },
     orderBy: { name: "asc" },
   });
 }

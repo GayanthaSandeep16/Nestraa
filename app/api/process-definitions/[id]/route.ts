@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { deleteProcessDefinition, updateProcessDefinition } from "@/lib/services/process-definitions";
 import { processDefinitionUpdateSchema } from "@/lib/validation/process-definitions";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/process-definitions/[id]">) {
+async function handlePATCH(request: NextRequest, ctx: RouteContext<"/api/process-definitions/[id]">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = processDefinitionUpdateSchema.safeParse(body);
@@ -14,8 +15,11 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/proces
   return NextResponse.json(processDefinition);
 }
 
-export async function DELETE(_request: NextRequest, ctx: RouteContext<"/api/process-definitions/[id]">) {
+async function handleDELETE(_request: NextRequest, ctx: RouteContext<"/api/process-definitions/[id]">) {
   const { id } = await ctx.params;
   await deleteProcessDefinition(id);
   return new NextResponse(null, { status: 204 });
 }
+
+export const PATCH = withModuleAccess("product-catalog", handlePATCH);
+export const DELETE = withModuleAccess("product-catalog", handleDELETE);

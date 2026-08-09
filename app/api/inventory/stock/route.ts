@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentStock, getExpiringBatches, getLowStock } from "@/lib/services/inventory";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const view = searchParams.get("view") ?? "current";
 
@@ -21,3 +22,5 @@ export async function GET(request: NextRequest) {
   });
   return NextResponse.json(rows);
 }
+
+export const GET = withModuleAccess("inventory", handleGET);

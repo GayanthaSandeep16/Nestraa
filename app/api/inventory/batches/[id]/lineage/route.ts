@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getBatchLineage } from "@/lib/services/inventory";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function GET(_request: NextRequest, ctx: RouteContext<"/api/inventory/batches/[id]/lineage">) {
+async function handleGET(_request: NextRequest, ctx: RouteContext<"/api/inventory/batches/[id]/lineage">) {
   const { id } = await ctx.params;
   const result = await getBatchLineage(id);
   if (!result) {
@@ -9,3 +10,5 @@ export async function GET(_request: NextRequest, ctx: RouteContext<"/api/invento
   }
   return NextResponse.json(result);
 }
+
+export const GET = withModuleAccess("inventory", handleGET);

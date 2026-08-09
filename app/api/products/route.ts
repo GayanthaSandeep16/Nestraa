@@ -2,13 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createProduct, listProducts } from "@/lib/services/products";
 import { productSchema } from "@/lib/validation/products";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function GET() {
+async function handleGET() {
   const products = await listProducts();
   return NextResponse.json(products);
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   const body = await request.json();
   const parsed = productSchema.safeParse(body);
   if (!parsed.success) {
@@ -22,3 +23,6 @@ export async function POST(request: NextRequest) {
     return toErrorResponse(error);
   }
 }
+
+export const GET = withModuleAccess("product-catalog", handleGET);
+export const POST = withModuleAccess("product-catalog", handlePOST);

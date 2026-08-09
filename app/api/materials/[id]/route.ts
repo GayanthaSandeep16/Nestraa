@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { softDeleteMaterial, updateMaterial } from "@/lib/services/materials";
 import { materialUpdateSchema } from "@/lib/validation/materials";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/materials/[id]">) {
+async function handlePATCH(request: NextRequest, ctx: RouteContext<"/api/materials/[id]">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = materialUpdateSchema.safeParse(body);
@@ -19,8 +20,11 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/materi
   }
 }
 
-export async function DELETE(_request: NextRequest, ctx: RouteContext<"/api/materials/[id]">) {
+async function handleDELETE(_request: NextRequest, ctx: RouteContext<"/api/materials/[id]">) {
   const { id } = await ctx.params;
   await softDeleteMaterial(id);
   return new NextResponse(null, { status: 204 });
 }
+
+export const PATCH = withModuleAccess("suppliers-materials", handlePATCH);
+export const DELETE = withModuleAccess("suppliers-materials", handleDELETE);

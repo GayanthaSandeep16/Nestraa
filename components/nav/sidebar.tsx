@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navItems, type NavGroup } from "@/lib/nav";
+import { canAccessModule } from "@/lib/auth/roles";
 
 const groupOrder: NavGroup[] = ["Setup", "Operations"];
 
@@ -11,9 +12,10 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar() {
+export function Sidebar({ roleName }: { roleName: string | null }) {
   const pathname = usePathname();
-  const dashboardItem = navItems.find((item) => !item.group);
+  const allowedItems = navItems.filter((item) => canAccessModule(roleName, item.moduleKey));
+  const dashboardItem = allowedItems.find((item) => !item.group);
 
   return (
     <aside className="hidden md:flex w-[240px] fixed inset-y-0 left-0 flex-col border-r border-outline-variant bg-surface-container-low">
@@ -27,7 +29,7 @@ export function Sidebar() {
         )}
 
         {groupOrder.map((group) => {
-          const items = navItems.filter((item) => item.group === group);
+          const items = allowedItems.filter((item) => item.group === group);
           if (items.length === 0) return null;
 
           return (

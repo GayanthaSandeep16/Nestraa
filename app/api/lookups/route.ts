@@ -5,8 +5,9 @@ import {
   listUnitsOfMeasure,
   listWarehouses,
 } from "@/lib/services/lookups";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function GET() {
+async function handleGET() {
   const [unitsOfMeasure, categories, warehouses, packageSizes] = await Promise.all([
     listUnitsOfMeasure(),
     listCategories(),
@@ -15,3 +16,6 @@ export async function GET() {
   ]);
   return NextResponse.json({ unitsOfMeasure, categories, warehouses, packageSizes });
 }
+
+// Shared reference data used across modules — any authenticated user can read it.
+export const GET = withModuleAccess("dashboard", handleGET);

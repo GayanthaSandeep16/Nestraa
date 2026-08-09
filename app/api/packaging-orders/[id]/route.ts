@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cancelPackagingOrder } from "@/lib/services/packaging-orders";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function PATCH(_request: NextRequest, ctx: RouteContext<"/api/packaging-orders/[id]">) {
+async function handlePATCH(_request: NextRequest, ctx: RouteContext<"/api/packaging-orders/[id]">) {
   const { id } = await ctx.params;
 
   try {
@@ -12,3 +13,5 @@ export async function PATCH(_request: NextRequest, ctx: RouteContext<"/api/packa
     return toErrorResponse(error);
   }
 }
+
+export const PATCH = withModuleAccess("packaging", handlePATCH);

@@ -3,13 +3,14 @@ import { createPackagingOrder, listPackagingOrders } from "@/lib/services/packag
 import { packagingOrderSchema } from "@/lib/validation/packaging-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function GET() {
+async function handleGET() {
   const orders = await listPackagingOrders();
   return NextResponse.json(orders);
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   const body = await request.json();
   const parsed = packagingOrderSchema.safeParse(body);
   if (!parsed.success) {
@@ -24,3 +25,6 @@ export async function POST(request: NextRequest) {
     return toErrorResponse(error);
   }
 }
+
+export const GET = withModuleAccess("packaging", handleGET);
+export const POST = withModuleAccess("packaging", handlePOST);

@@ -3,13 +3,14 @@ import { createBlendOrder, listBlendOrders } from "@/lib/services/blend-orders";
 import { blendOrderSchema } from "@/lib/validation/blend-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function GET() {
+async function handleGET() {
   const orders = await listBlendOrders();
   return NextResponse.json(orders);
 }
 
-export async function POST(request: NextRequest) {
+async function handlePOST(request: NextRequest) {
   const body = await request.json();
   const parsed = blendOrderSchema.safeParse(body);
   if (!parsed.success) {
@@ -24,3 +25,6 @@ export async function POST(request: NextRequest) {
     return toErrorResponse(error);
   }
 }
+
+export const GET = withModuleAccess("production", handleGET);
+export const POST = withModuleAccess("production", handlePOST);

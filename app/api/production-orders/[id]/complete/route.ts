@@ -3,8 +3,9 @@ import { completeProductionOrder } from "@/lib/services/production-orders";
 import { productionOrderCompletionSchema } from "@/lib/validation/production-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function POST(request: NextRequest, ctx: RouteContext<"/api/production-orders/[id]/complete">) {
+async function handlePOST(request: NextRequest, ctx: RouteContext<"/api/production-orders/[id]/complete">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = productionOrderCompletionSchema.safeParse(body);
@@ -20,3 +21,5 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/product
     return toErrorResponse(error);
   }
 }
+
+export const POST = withModuleAccess("production", handlePOST);

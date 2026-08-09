@@ -3,8 +3,9 @@ import { completePackagingOrder } from "@/lib/services/packaging-orders";
 import { packagingOrderCompletionSchema } from "@/lib/validation/packaging-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function POST(request: NextRequest, ctx: RouteContext<"/api/packaging-orders/[id]/complete">) {
+async function handlePOST(request: NextRequest, ctx: RouteContext<"/api/packaging-orders/[id]/complete">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = packagingOrderCompletionSchema.safeParse(body);
@@ -20,3 +21,5 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/packagi
     return toErrorResponse(error);
   }
 }
+
+export const POST = withModuleAccess("packaging", handlePOST);

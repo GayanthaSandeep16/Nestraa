@@ -3,8 +3,9 @@ import { completeBlendOrder } from "@/lib/services/blend-orders";
 import { blendOrderCompletionSchema } from "@/lib/validation/blend-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function POST(request: NextRequest, ctx: RouteContext<"/api/blend-orders/[id]/complete">) {
+async function handlePOST(request: NextRequest, ctx: RouteContext<"/api/blend-orders/[id]/complete">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = blendOrderCompletionSchema.safeParse(body);
@@ -20,3 +21,5 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/blend-o
     return toErrorResponse(error);
   }
 }
+
+export const POST = withModuleAccess("production", handlePOST);

@@ -58,18 +58,25 @@ export function ReportsPanel() {
   const [expiring, setExpiring] = useState<ExpiringBatchRow[]>([]);
   const [sales, setSales] = useState<SalesOrderRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
     const url = view === "sales" ? "/api/sales-orders" : `/api/inventory/stock?view=${view}`;
     fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(typeof data?.error === "string" ? data.error : "Failed to load report");
+        }
         if (view === "current") setCurrent(data);
         if (view === "low") setLow(data);
         if (view === "expiring") setExpiring(data);
         if (view === "sales") setSales(data);
-        setLoading(false);
-      });
+      })
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
   }, [view]);
 
   const currentColumns: DataTableColumn<CurrentStockRow>[] = [
@@ -127,6 +134,8 @@ export function ReportsPanel() {
 
       {loading ? (
         <p className="text-body-md text-on-surface-variant">Loading…</p>
+      ) : error ? (
+        <p className="text-body-md text-error">{error}</p>
       ) : view === "current" ? (
         <DataTable
           columns={currentColumns}

@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { listMovements, type MovementFilters } from "@/lib/services/inventory";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function GET(request: NextRequest) {
+async function handleGET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
   const filters: MovementFilters = {
@@ -14,3 +15,5 @@ export async function GET(request: NextRequest) {
   const movements = await listMovements(filters);
   return NextResponse.json(movements);
 }
+
+export const GET = withModuleAccess("inventory", handleGET);

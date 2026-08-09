@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSalesOrderStatus } from "@/lib/services/sales-orders";
 import { salesOrderStatusSchema } from "@/lib/validation/sales-orders";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/sales-orders/[id]">) {
+async function handlePATCH(request: NextRequest, ctx: RouteContext<"/api/sales-orders/[id]">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = salesOrderStatusSchema.safeParse(body);
@@ -18,3 +19,5 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/sales-
     return toErrorResponse(error);
   }
 }
+
+export const PATCH = withModuleAccess("sales", handlePATCH);

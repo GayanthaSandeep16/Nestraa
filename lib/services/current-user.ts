@@ -4,10 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 export async function getCurrentAppUser() {
   const supabase = await createClient();
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) return null;
+  if (!user) return null;
 
-  return prisma.appUser.findUnique({ where: { id: session.user.id } });
+  return prisma.appUser.findUnique({
+    where: { id: user.id },
+    include: { role: true },
+  });
 }

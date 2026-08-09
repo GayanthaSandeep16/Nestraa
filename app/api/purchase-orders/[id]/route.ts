@@ -3,8 +3,9 @@ import { updatePurchaseOrderStatus } from "@/lib/services/purchase-orders";
 import { purchaseOrderStatusSchema } from "@/lib/validation/purchase-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { withModuleAccess } from "@/lib/auth/guard";
 
-export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/purchase-orders/[id]">) {
+async function handlePATCH(request: NextRequest, ctx: RouteContext<"/api/purchase-orders/[id]">) {
   const { id } = await ctx.params;
   const body = await request.json();
   const parsed = purchaseOrderStatusSchema.safeParse(body);
@@ -20,3 +21,5 @@ export async function PATCH(request: NextRequest, ctx: RouteContext<"/api/purcha
     return toErrorResponse(error);
   }
 }
+
+export const PATCH = withModuleAccess("procurement", handlePATCH);

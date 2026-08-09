@@ -19,7 +19,7 @@ function ComingSoonPanel({ title, description }: { title: string; description: s
     <div className="flex flex-1 flex-col items-center justify-center p-xl">
       <div className="flex flex-col items-center gap-sm text-center">
         <h2 className="text-headline-lg text-on-surface">{title}</h2>
-        <p className="max-w-md text-body-md text-on-surface-variant">{description}</p>
+        <p className="max-w-[28rem] text-body-md text-on-surface-variant">{description}</p>
       </div>
     </div>
   );
