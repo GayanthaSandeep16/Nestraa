@@ -13,35 +13,14 @@ export const MODULE_KEYS = [
   "consignment",
   "reports",
   "planning",
+  "admin",
 ] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
-// Which roles can access which top-level module. Adjust freely — this is a
-// plain code map, not schema, so changes don't need a migration.
-const MODULE_ACCESS: Record<ModuleKey, RoleName[]> = {
-  dashboard: ["admin", "procurement", "production", "sales", "warehouse", "sales_rep"],
-  "suppliers-materials": ["admin", "procurement"],
-  "product-catalog": ["admin", "procurement", "production"],
-  procurement: ["admin", "procurement", "warehouse"],
-  inventory: ["admin", "procurement", "production", "sales", "warehouse"],
-  production: ["admin", "production"],
-  packaging: ["admin", "production", "warehouse"],
-  sales: ["admin", "sales"],
-  consignment: ["admin", "sales", "sales_rep"],
-  reports: ["admin", "procurement", "production", "sales", "warehouse"],
-  planning: ["admin", "production"],
-};
-
-function isRoleName(value: string): value is RoleName {
-  return (ROLE_NAMES as readonly string[]).includes(value);
+export function isRoleName(value: string | null | undefined): value is RoleName {
+  return !!value && (ROLE_NAMES as readonly string[]).includes(value);
 }
 
-export function canAccessModule(roleName: string | null | undefined, moduleKey: ModuleKey): boolean {
-  if (!roleName || !isRoleName(roleName)) return false;
-  return MODULE_ACCESS[moduleKey].includes(roleName);
-}
-
-export function modulesForRole(roleName: string | null | undefined): ModuleKey[] {
-  if (!roleName || !isRoleName(roleName)) return [];
-  return MODULE_KEYS.filter((key) => MODULE_ACCESS[key].includes(roleName));
+export function isModuleKey(value: string): value is ModuleKey {
+  return (MODULE_KEYS as readonly string[]).includes(value);
 }

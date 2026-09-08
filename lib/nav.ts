@@ -10,11 +10,12 @@ import {
   CalendarClock,
   BarChart3,
   Truck,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/lib/auth/roles";
 
-export type NavGroup = "Setup" | "Operations";
+export type NavGroup = "Setup" | "Operations" | "Admin";
 
 export interface NavItem {
   href: string;
@@ -38,4 +39,6 @@ export const navItems: NavItem[] = [
   { href: "/consignments", label: "Consignments", icon: Truck, group: "Operations", moduleKey: "consignment" },
   { href: "/reports", label: "Reports", icon: BarChart3, group: "Operations", moduleKey: "reports" },
   { href: "/planning", label: "Production Planning", icon: CalendarClock, group: "Operations", moduleKey: "planning" },
+
+  { href: "/admin", label: "Administration", icon: ShieldCheck, group: "Admin", moduleKey: "admin" },
 ];

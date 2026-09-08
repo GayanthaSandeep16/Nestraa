@@ -3,18 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navItems, type NavGroup } from "@/lib/nav";
-import { canAccessModule } from "@/lib/auth/roles";
 
-const groupOrder: NavGroup[] = ["Setup", "Operations"];
+const groupOrder: NavGroup[] = ["Setup", "Operations", "Admin"];
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ roleName }: { roleName: string | null }) {
+export function Sidebar({ allowedModuleKeys }: { allowedModuleKeys: string[] }) {
   const pathname = usePathname();
-  const allowedItems = navItems.filter((item) => canAccessModule(roleName, item.moduleKey));
+  const allowedItems = navItems.filter((item) => allowedModuleKeys.includes(item.moduleKey));
   const dashboardItem = allowedItems.find((item) => !item.group);
 
   return (
