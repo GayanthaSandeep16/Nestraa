@@ -15,3 +15,18 @@ export function listWarehouses() {
 export function listPackageSizes() {
   return prisma.packageSize.findMany({ include: { uom: true }, orderBy: { name: "asc" } });
 }
+
+export function listFinishedGoods() {
+  return prisma.material.findMany({
+    where: { materialType: "finished_good", deletedAt: null, isActive: true },
+    include: { baseUom: true },
+    orderBy: { name: "asc" },
+  });
+}
+
+export function listSalesReps() {
+  return prisma.appUser.findMany({
+    where: { isActive: true, role: { name: "sales_rep" } },
+    orderBy: { fullName: "asc" },
+  });
+}

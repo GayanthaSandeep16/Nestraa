@@ -1,4 +1,4 @@
-export const ROLE_NAMES = ["admin", "procurement", "production", "sales", "warehouse"] as const;
+export const ROLE_NAMES = ["admin", "procurement", "production", "sales", "warehouse", "sales_rep"] as const;
 export type RoleName = (typeof ROLE_NAMES)[number];
 
 export const MODULE_KEYS = [
@@ -10,6 +10,7 @@ export const MODULE_KEYS = [
   "production",
   "packaging",
   "sales",
+  "consignment",
   "reports",
   "planning",
 ] as const;
@@ -18,7 +19,7 @@ export type ModuleKey = (typeof MODULE_KEYS)[number];
 // Which roles can access which top-level module. Adjust freely — this is a
 // plain code map, not schema, so changes don't need a migration.
 const MODULE_ACCESS: Record<ModuleKey, RoleName[]> = {
-  dashboard: ["admin", "procurement", "production", "sales", "warehouse"],
+  dashboard: ["admin", "procurement", "production", "sales", "warehouse", "sales_rep"],
   "suppliers-materials": ["admin", "procurement"],
   "product-catalog": ["admin", "procurement", "production"],
   procurement: ["admin", "procurement", "warehouse"],
@@ -26,6 +27,7 @@ const MODULE_ACCESS: Record<ModuleKey, RoleName[]> = {
   production: ["admin", "production"],
   packaging: ["admin", "production", "warehouse"],
   sales: ["admin", "sales"],
+  consignment: ["admin", "sales", "sales_rep"],
   reports: ["admin", "procurement", "production", "sales", "warehouse"],
   planning: ["admin", "production"],
 };

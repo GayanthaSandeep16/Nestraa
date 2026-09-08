@@ -60,7 +60,7 @@ export function SalesTabs() {
       ) : (
         <ComingSoonPanel
           title="Receipts"
-          description="Payment receipts aren't in the schema yet — structure needs to be confirmed before this can be built."
+          description="Payment receipts for walk-in invoices aren't built yet — see the Consignments page for retailer payments."
         />
       )}
     </div>
