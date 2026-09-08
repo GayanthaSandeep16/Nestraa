@@ -9,12 +9,15 @@ interface LatestBalanceRow {
 // Retailer's outstanding balance is always the latest cached runningBalance
 // per customer — never summed client-side. One raw query gets "latest row
 // per customer_id" cheaply (mirrors the reporting-view pattern used for
-// v_current_stock elsewhere).
+// v_current_stock elsewhere). Joined to retailer_profiles so plain
+// sales-invoice AR (same retailer_ledger table since the unified-AR pass)
+// doesn't leak into consignment KPIs.
 function getLatestBalancePerRetailer() {
   return prisma.$queryRaw<LatestBalanceRow[]>`
-    SELECT DISTINCT ON (customer_id) customer_id, running_balance
-    FROM retailer_ledger
-    ORDER BY customer_id, created_at DESC
+    SELECT DISTINCT ON (rl.customer_id) rl.customer_id, rl.running_balance
+    FROM retailer_ledger rl
+    JOIN retailer_profiles rp ON rp.customer_id = rl.customer_id
+    ORDER BY rl.customer_id, rl.created_at DESC
   `;
 }
 
@@ -29,7 +32,11 @@ async function getOverdueRetailerCount(latestBalances: LatestBalanceRow[]) {
   if (withBalance.length === 0) return 0;
 
   const recentPayments = await prisma.payment.findMany({
-    where: { customerId: { in: withBalance.map((r) => r.customer_id) }, createdAt: { gte: cutoff } },
+    where: {
+      customerId: { in: withBalance.map((r) => r.customer_id) },
+      createdAt: { gte: cutoff },
+      consignmentId: { not: null },
+    },
     select: { customerId: true },
     distinct: ["customerId"],
   });
@@ -49,8 +56,14 @@ export async function getConsignmentDashboardMetrics() {
       where: { consignment: { status: { in: ["delivered", "partially_settled"] } } },
       select: { quantityDelivered: true, quantitySold: true, quantityReturned: true, unitPrice: true },
     }),
-    prisma.payment.aggregate({ where: { createdAt: { gte: startOfToday } }, _sum: { amount: true } }),
-    prisma.payment.aggregate({ where: { createdAt: { gte: startOfMonth } }, _sum: { amount: true } }),
+    prisma.payment.aggregate({
+      where: { createdAt: { gte: startOfToday }, consignmentId: { not: null } },
+      _sum: { amount: true },
+    }),
+    prisma.payment.aggregate({
+      where: { createdAt: { gte: startOfMonth }, consignmentId: { not: null } },
+      _sum: { amount: true },
+    }),
     getLatestBalancePerRetailer(),
     prisma.consignmentReturnItem.findMany({
       select: { quantity: true, qualityStatus: true, consignmentItem: { select: { unitPrice: true } } },

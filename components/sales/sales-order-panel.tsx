@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, X, CheckCircle2, Ban, Receipt } from "lucide-react";
+import { Plus, Trash2, X, CheckCircle2, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -107,6 +107,18 @@ export function SalesOrderPanel() {
     loadProducts();
   }, []);
 
+  async function prefillPrice(index: number, materialId: string) {
+    const customerId = createForm.watch("customerId");
+    if (!customerId || !materialId) return;
+    if (Number(createForm.watch(`items.${index}.unitPrice`)) > 0) return;
+    const res = await fetch(
+      `/api/customer-pricing/effective?customerId=${customerId}&materialId=${materialId}`
+    );
+    if (!res.ok) return;
+    const { unitPrice } = await res.json();
+    if (unitPrice) createForm.setValue(`items.${index}.unitPrice`, Number(unitPrice));
+  }
+
   function openCreateForm() {
     setFormError(null);
     createForm.reset(emptyValues);
@@ -183,17 +195,6 @@ export function SalesOrderPanel() {
               </button>
             </>
           )}
-          {order.status === "completed" && (
-            <button
-              type="button"
-              disabled
-              title="Sales Invoices — coming soon"
-              aria-label={`Create invoice for ${order.orderNo}`}
-              className="cursor-not-allowed rounded-md p-xs text-on-surface-variant opacity-50"
-            >
-              <Receipt size={16} />
-            </button>
-          )}
         </div>
       ),
     },
@@ -255,7 +256,13 @@ export function SalesOrderPanel() {
               <div key={field.id} className="grid grid-cols-1 gap-sm rounded-md border border-outline-variant p-sm sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                 <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
                   Product
-                  <Select {...createForm.register(`items.${index}.materialId` as const)}>
+                  <Select
+                    {...createForm.register(`items.${index}.materialId` as const)}
+                    onChange={(e) => {
+                      createForm.setValue(`items.${index}.materialId`, e.target.value);
+                      prefillPrice(index, e.target.value);
+                    }}
+                  >
                     <option value="">Select product…</option>
                     {products.map((product) => (
                       <option key={product.id} value={product.id}>

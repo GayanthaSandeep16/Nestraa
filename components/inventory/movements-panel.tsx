@@ -79,7 +79,7 @@ export function MovementsPanel() {
     { key: "direction", header: "Direction", render: (row) => <StatusBadge label={row.direction} tone={directionTones[row.direction]} /> },
     { key: "quantity", header: "Quantity", render: (row) => `${row.quantity} ${row.uom.code}` },
     { key: "source", header: "Source", render: (row) => row.source.replace(/_/g, " ") },
-    { key: "warehouse", header: "Warehouse", render: (row) => row.warehouse.name },
+    { key: "warehouse", header: "Warehouse", render: (row) => row.warehouse?.name ?? "—" },
     { key: "batch", header: "Batch #", render: (row) => row.batch?.batchNo ?? "—" },
     {
       key: "qc",

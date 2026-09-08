@@ -1,29 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { CustomerPanel } from "@/components/sales/customer-panel";
 import { SalesOrderPanel } from "@/components/sales/sales-order-panel";
+import { InvoicePanel } from "@/components/sales/invoice-panel";
+import { ReceiptsPanel } from "@/components/sales/receipts-panel";
+import { PricingPanel } from "@/components/sales/pricing-panel";
+import { DeliveriesPanel } from "@/components/sales/deliveries-panel";
+import { ReturnsPanel } from "@/components/sales/returns-panel";
 
-type Tab = "customers" | "orders" | "invoices" | "receipts";
+type Tab = "customers" | "orders" | "invoices" | "receipts" | "pricing" | "deliveries" | "returns";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "customers", label: "Customers" },
   { id: "orders", label: "Sales Orders" },
   { id: "invoices", label: "Invoices" },
   { id: "receipts", label: "Receipts" },
+  { id: "pricing", label: "Pricing" },
+  { id: "deliveries", label: "Deliveries" },
+  { id: "returns", label: "Returns" },
 ];
 
-function ComingSoonPanel({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center p-xl">
-      <div className="flex flex-col items-center gap-sm text-center">
-        <h2 className="text-headline-lg text-on-surface">{title}</h2>
-        <p className="max-w-[28rem] text-body-md text-on-surface-variant">{description}</p>
-      </div>
-    </div>
-  );
-}
+const panels: Record<Tab, ReactNode> = {
+  customers: <CustomerPanel />,
+  orders: <SalesOrderPanel />,
+  invoices: <InvoicePanel />,
+  receipts: <ReceiptsPanel />,
+  pricing: <PricingPanel />,
+  deliveries: <DeliveriesPanel />,
+  returns: <ReturnsPanel />,
+};
 
 export function SalesTabs() {
   const [activeTab, setActiveTab] = useState<Tab>("customers");
@@ -48,21 +55,7 @@ export function SalesTabs() {
         ))}
       </div>
 
-      {activeTab === "customers" ? (
-        <CustomerPanel />
-      ) : activeTab === "orders" ? (
-        <SalesOrderPanel />
-      ) : activeTab === "invoices" ? (
-        <ComingSoonPanel
-          title="Invoices"
-          description="Sales Invoices are schema-ready but not built yet — coming soon."
-        />
-      ) : (
-        <ComingSoonPanel
-          title="Receipts"
-          description="Payment receipts for walk-in invoices aren't built yet — see the Consignments page for retailer payments."
-        />
-      )}
+      {panels[activeTab]}
     </div>
   );
 }

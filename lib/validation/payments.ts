@@ -9,10 +9,12 @@ const optionalText = () =>
 export const paymentMethodValues = ["cash", "bank_transfer", "cheque", "other"] as const;
 
 export const paymentSchema = z.object({
-  customerId: z.string().min(1, "Retailer is required"),
+  customerId: z.string().min(1, "Customer is required"),
   consignmentId: optionalText(),
+  invoiceId: optionalText(),
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   paymentMethod: z.enum(paymentMethodValues),
+  paymentDate: optionalText(),
   referenceNumber: optionalText(),
   notes: optionalText(),
 });

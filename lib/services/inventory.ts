@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 
 interface CurrentStockRow {
   material_id: string;
-  warehouse_id: string;
+  warehouse_id: string | null;
   quantity_on_hand: Prisma.Decimal;
 }
 
@@ -29,7 +29,10 @@ export async function getCurrentStock(filters?: { materialId?: string; warehouse
   `;
 
   const materialIds = [...new Set(rows.map((row) => row.material_id))];
-  const warehouseIds = [...new Set(rows.map((row) => row.warehouse_id))];
+  // v_current_stock is warehouse stock only, but guard against a NULL
+  // warehouse_id leaking in (inventory_movements.warehouse_id is nullable
+  // since the consignment module) so Prisma never gets `id IN (uuid, NULL)`.
+  const warehouseIds = [...new Set(rows.map((row) => row.warehouse_id).filter((id): id is string => id !== null))];
 
   const [materials, warehouses] = await Promise.all([
     prisma.material.findMany({ where: { id: { in: materialIds } }, include: { baseUom: true } }),
@@ -39,11 +42,13 @@ export async function getCurrentStock(filters?: { materialId?: string; warehouse
   const materialById = new Map(materials.map((material) => [material.id, material]));
   const warehouseById = new Map(warehouses.map((warehouse) => [warehouse.id, warehouse]));
 
-  return rows.map((row) => ({
-    material: materialById.get(row.material_id) ?? null,
-    warehouse: warehouseById.get(row.warehouse_id) ?? null,
-    quantityOnHand: row.quantity_on_hand,
-  }));
+  return rows
+    .filter((row) => row.warehouse_id !== null)
+    .map((row) => ({
+      material: materialById.get(row.material_id) ?? null,
+      warehouse: row.warehouse_id ? warehouseById.get(row.warehouse_id) ?? null : null,
+      quantityOnHand: row.quantity_on_hand,
+    }));
 }
 
 export async function getLowStock() {

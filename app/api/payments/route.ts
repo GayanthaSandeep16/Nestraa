@@ -10,6 +10,7 @@ async function handleGET(request: NextRequest) {
   const payments = await listPayments({
     customerId: searchParams.get("customerId") ?? undefined,
     consignmentId: searchParams.get("consignmentId") ?? undefined,
+    invoiceId: searchParams.get("invoiceId") ?? undefined,
   });
   return NextResponse.json(payments);
 }

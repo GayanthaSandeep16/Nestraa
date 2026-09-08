@@ -5,7 +5,7 @@ import { COMPANY, formatAmount, formatMoney } from "@/lib/pdf/company";
 
 interface LedgerEntryRow {
   transactionDate: string;
-  transactionType: "delivery" | "payment" | "return";
+  transactionType: "delivery" | "payment" | "return" | "invoice";
   description: string | null;
   debit: string;
   credit: string;
@@ -16,6 +16,7 @@ const typeLabels: Record<LedgerEntryRow["transactionType"], string> = {
   delivery: "Delivery",
   payment: "Payment",
   return: "Return",
+  invoice: "Invoice",
 };
 
 export function StatementDocument({
