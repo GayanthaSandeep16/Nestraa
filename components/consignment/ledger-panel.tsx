@@ -35,6 +35,8 @@ export function LedgerPanel() {
   const [selectedRetailerId, setSelectedRetailerId] = useState("");
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [outstandingBalance, setOutstandingBalance] = useState<string>("0");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loadedRetailerId, setLoadedRetailerId] = useState<string | null>(null);
   const loading = selectedRetailerId !== "" && selectedRetailerId !== loadedRetailerId;
 
@@ -42,15 +44,20 @@ export function LedgerPanel() {
     fetchJson<Retailer[]>("/api/retailers").then((data) => setRetailers(data ?? []));
   }, []);
 
+  useEffect(() => setPage(1), [selectedRetailerId]);
+
   useEffect(() => {
     if (!selectedRetailerId) return;
 
-    fetchJson<{ entries: LedgerEntry[]; outstandingBalance: string }>(`/api/retailers/${selectedRetailerId}/ledger`).then((data) => {
+    fetchJson<{ entries: LedgerEntry[]; outstandingBalance: string; pageCount?: number }>(
+      `/api/retailers/${selectedRetailerId}/ledger?page=${page}&pageSize=50`
+    ).then((data) => {
       setEntries(data?.entries ?? []);
       setOutstandingBalance(data?.outstandingBalance ?? "0");
+      setPageCount(data?.pageCount ?? 1);
       setLoadedRetailerId(selectedRetailerId);
     });
-  }, [selectedRetailerId]);
+  }, [selectedRetailerId, page]);
 
   const columns: DataTableColumn<LedgerEntry>[] = [
     { key: "date", header: "Date", render: (e) => new Date(e.transactionDate).toLocaleDateString() },
@@ -98,6 +105,9 @@ export function LedgerPanel() {
           rows={entries}
           getRowKey={(e) => e.id}
           emptyMessage={loading ? "Loading ledger…" : "No transactions yet for this retailer."}
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
         />
       ) : (
         <p className="text-body-md text-on-surface-variant">Select a retailer to view their ledger.</p>

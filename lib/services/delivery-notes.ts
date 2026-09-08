@@ -5,8 +5,12 @@ const include = {
   deliverer: true,
 } as const;
 
-export function listDeliveryNotes() {
-  return prisma.deliveryNote.findMany({ include, orderBy: { createdAt: "desc" } });
+export function listDeliveryNotes(opts?: { skip?: number; take?: number }) {
+  return prisma.deliveryNote.findMany({ include, orderBy: { createdAt: "desc" }, ...opts });
+}
+
+export function countDeliveryNotes() {
+  return prisma.deliveryNote.count();
 }
 
 export interface DeliveryNoteInput {

@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/db/prisma";
 
-export function listSuppliers() {
+export function listSuppliers(opts?: { skip?: number; take?: number }) {
   return prisma.supplier.findMany({
     where: { deletedAt: null },
     orderBy: { name: "asc" },
+    ...opts,
   });
+}
+
+export function countSuppliers() {
+  return prisma.supplier.count({ where: { deletedAt: null } });
 }
 
 export function getSupplier(id: string) {

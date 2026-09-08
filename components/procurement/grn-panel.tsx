@@ -93,6 +93,8 @@ export function GrnPanel() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [lookups, setLookups] = useState<Lookups>({ unitsOfMeasure: [], warehouses: [] });
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -116,10 +118,11 @@ export function GrnPanel() {
   const outstandingPos = purchaseOrders.filter((po) => po.status === "sent" || po.status === "partially_received");
 
   function loadGrns() {
-    return fetch("/api/grns")
+    return fetch(`/api/grns?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setGrns(data);
+        setGrns(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -149,12 +152,16 @@ export function GrnPanel() {
   }
 
   useEffect(() => {
-    loadGrns();
     loadPurchaseOrders();
     loadSuppliers();
     loadMaterials();
     loadLookups();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadGrns();
+  }, [page]);
 
   function openCreateForm() {
     setFormError(null);
@@ -401,7 +408,15 @@ export function GrnPanel() {
         </form>
       )}
 
-      <DataTable columns={columns} rows={grns} getRowKey={(grn) => grn.id} emptyMessage="No GRNs logged yet." />
+      <DataTable
+        columns={columns}
+        rows={grns}
+        getRowKey={(grn) => grn.id}
+        emptyMessage="No GRNs logged yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

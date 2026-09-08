@@ -44,6 +44,8 @@ type LineDraft = { quantity: string; unitPrice: string; qualityStatus: (typeof r
 export function ReturnsPanel() {
   const [returns, setReturns] = useState<SalesReturn[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -55,18 +57,23 @@ export function ReturnsPanel() {
   const selectedInvoice = invoices.find((invoice) => invoice.id === invoiceId) ?? null;
 
   function loadReturns() {
-    return fetch("/api/sales-returns")
+    return fetch(`/api/sales-returns?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setReturns(data);
+        setReturns(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
 
   useEffect(() => {
-    loadReturns();
     fetch("/api/sales-invoices").then((res) => res.json()).then(setInvoices);
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadReturns();
+  }, [page]);
 
   function openForm() {
     setFormError(null);
@@ -275,6 +282,9 @@ export function ReturnsPanel() {
         rows={returns}
         getRowKey={(row) => row.id}
         emptyMessage="No sales returns yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

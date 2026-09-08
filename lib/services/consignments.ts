@@ -11,8 +11,12 @@ const include = {
   items: { include: { material: true, batch: true } },
 } as const;
 
-export function listConsignments() {
-  return prisma.consignment.findMany({ include, orderBy: { createdAt: "desc" } });
+export function listConsignments(opts?: { skip?: number; take?: number }) {
+  return prisma.consignment.findMany({ include, orderBy: { createdAt: "desc" }, ...opts });
+}
+
+export function countConsignments() {
+  return prisma.consignment.count();
 }
 
 export function getConsignment(id: string) {

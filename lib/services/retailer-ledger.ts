@@ -40,11 +40,19 @@ export async function appendLedgerEntry(
   });
 }
 
-export function getLedger(customerId: string) {
+// Unpaginated: ascending (running-balance reads top-to-bottom), used by the PDF
+// statement. Paginated: descending so page 1 is the most recent activity — each
+// row still carries its own cached runningBalance so order doesn't affect it.
+export function getLedger(customerId: string, opts?: { skip?: number; take?: number }) {
   return prisma.retailerLedger.findMany({
     where: { customerId },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: opts ? "desc" : "asc" },
+    ...opts,
   });
+}
+
+export function countLedger(customerId: string) {
+  return prisma.retailerLedger.count({ where: { customerId } });
 }
 
 // Never sum ledger rows client-side for a balance — always read the latest

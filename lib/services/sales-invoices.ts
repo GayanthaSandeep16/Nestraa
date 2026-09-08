@@ -8,11 +8,15 @@ const include = {
   customer: true,
   salesOrder: { select: { id: true, orderNo: true } },
   items: { include: { material: true } },
-  payments: true,
+  payments: { orderBy: { createdAt: "asc" } }, // last element = latest receipt (see receipts-panel reprint)
 } as const;
 
-export function listSalesInvoices() {
-  return prisma.salesInvoice.findMany({ include, orderBy: { createdAt: "desc" } });
+export function listSalesInvoices(opts?: { skip?: number; take?: number }) {
+  return prisma.salesInvoice.findMany({ include, orderBy: { createdAt: "desc" }, ...opts });
+}
+
+export function countSalesInvoices() {
+  return prisma.salesInvoice.count();
 }
 
 export function getSalesInvoice(id: string) {

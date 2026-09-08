@@ -7,8 +7,12 @@ const include = {
   batchDetails: { include: { batch: { include: { material: true, uom: true, warehouse: true } } } },
 } as const;
 
-export function listProductionOrders() {
-  return prisma.productionOrder.findMany({ include, orderBy: { createdAt: "desc" } });
+export function listProductionOrders(opts?: { skip?: number; take?: number }) {
+  return prisma.productionOrder.findMany({ include, orderBy: { createdAt: "desc" }, ...opts });
+}
+
+export function countProductionOrders() {
+  return prisma.productionOrder.count();
 }
 
 export function getProductionOrder(id: string) {

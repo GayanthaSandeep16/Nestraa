@@ -16,6 +16,10 @@ interface DataTableProps<T> {
   getRowKey: (row: T) => string;
   onRowClick?: (row: T) => void;
   emptyMessage?: string;
+  // Pass all three to render a Prev/Next footer (server-side pagination).
+  page?: number;
+  pageCount?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function DataTable<T>({
@@ -24,7 +28,12 @@ export function DataTable<T>({
   getRowKey,
   onRowClick,
   emptyMessage = "No records yet.",
+  page,
+  pageCount,
+  onPageChange,
 }: DataTableProps<T>) {
+  const showPager = page != null && pageCount != null && onPageChange != null && pageCount > 1;
+
   return (
     <div className="overflow-x-auto rounded-md border border-outline-variant">
       <table className="w-full border-collapse text-left">
@@ -67,6 +76,30 @@ export function DataTable<T>({
           )}
         </tbody>
       </table>
+
+      {showPager && (
+        <div className="flex items-center justify-end gap-sm border-t border-outline-variant bg-surface-container-low px-md py-sm text-label-sm text-on-surface-variant">
+          <span>
+            Page {page} of {pageCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => onPageChange!(page! - 1)}
+            disabled={page! <= 1}
+            className="rounded border border-outline-variant px-sm py-xs disabled:opacity-40"
+          >
+            Prev
+          </button>
+          <button
+            type="button"
+            onClick={() => onPageChange!(page! + 1)}
+            disabled={page! >= pageCount!}
+            className="rounded border border-outline-variant px-sm py-xs disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 }

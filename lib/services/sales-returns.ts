@@ -14,8 +14,12 @@ const include = {
   creator: true,
 } as const;
 
-export function listSalesReturns() {
-  return prisma.salesReturn.findMany({ include, orderBy: { createdAt: "desc" } });
+export function listSalesReturns(opts?: { skip?: number; take?: number }) {
+  return prisma.salesReturn.findMany({ include, orderBy: { createdAt: "desc" }, ...opts });
+}
+
+export function countSalesReturns() {
+  return prisma.salesReturn.count();
 }
 
 export interface SalesReturnItemInput {

@@ -1,11 +1,16 @@
 import { prisma } from "@/lib/db/prisma";
 import type { CustomerType } from "@/lib/generated/prisma/client";
 
-export function listCustomers() {
+export function listCustomers(opts?: { skip?: number; take?: number }) {
   return prisma.customer.findMany({
     where: { deletedAt: null },
     orderBy: { name: "asc" },
+    ...opts,
   });
+}
+
+export function countCustomers() {
+  return prisma.customer.count({ where: { deletedAt: null } });
 }
 
 export function getCustomer(id: string) {

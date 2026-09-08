@@ -6,8 +6,12 @@ const include = {
   batchDetails: { include: { batch: { include: { material: true, uom: true, warehouse: true } } } },
 } as const;
 
-export function listBlendOrders() {
-  return prisma.blendOrder.findMany({ include, orderBy: { createdAt: "desc" } });
+export function listBlendOrders(opts?: { skip?: number; take?: number }) {
+  return prisma.blendOrder.findMany({ include, orderBy: { createdAt: "desc" }, ...opts });
+}
+
+export function countBlendOrders() {
+  return prisma.blendOrder.count();
 }
 
 export function getBlendOrder(id: string) {

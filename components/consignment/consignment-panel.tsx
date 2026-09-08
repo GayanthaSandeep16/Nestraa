@@ -86,6 +86,8 @@ export function ConsignmentPanel() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [finishedGoods, setFinishedGoods] = useState<FinishedGood[]>([]);
   const [salesReps, setSalesReps] = useState<SalesRep[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -98,14 +100,21 @@ export function ConsignmentPanel() {
   const { fields, append, remove } = useFieldArray({ control: createForm.control, name: "items" });
 
   function loadConsignments() {
-    return fetchJson<Consignment[]>("/api/consignments").then((data) => {
-      setConsignments(data ?? []);
+    return fetchJson<{ rows: Consignment[]; pageCount: number }>(
+      `/api/consignments?page=${page}&pageSize=50`
+    ).then((data) => {
+      setConsignments(data?.rows ?? []);
+      setPageCount(data?.pageCount ?? 1);
       setLoading(false);
     });
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadConsignments();
+  }, [page]);
+
+  useEffect(() => {
     fetchJson<Retailer[]>("/api/retailers").then((data) => setRetailers(data ?? []));
     fetchJson<{ warehouses: Warehouse[]; finishedGoods: FinishedGood[]; salesReps: SalesRep[] }>("/api/lookups").then((data) => {
       setWarehouses((data?.warehouses ?? []).filter((w) => !SYSTEM_WAREHOUSE_NAMES.has(w.name)));
@@ -295,6 +304,9 @@ export function ConsignmentPanel() {
         getRowKey={(c) => c.id}
         onRowClick={(c) => setSelectedId(c.id === selectedId ? null : c.id)}
         emptyMessage="No consignments yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
 
       {selected && <ConsignmentDetail consignment={selected} onChanged={refreshAndKeepSelection} />}

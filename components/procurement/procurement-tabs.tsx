@@ -4,12 +4,16 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { PurchaseOrderPanel } from "@/components/procurement/purchase-order-panel";
 import { GrnPanel } from "@/components/procurement/grn-panel";
+import { SupplierInvoicePanel } from "@/components/procurement/supplier-invoice-panel";
+import { SupplierPaymentPanel } from "@/components/procurement/supplier-payment-panel";
 
-type Tab = "purchase-orders" | "grns";
+type Tab = "purchase-orders" | "grns" | "supplier-invoices" | "supplier-payments";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "purchase-orders", label: "Purchase Orders" },
   { id: "grns", label: "GRN Receiving" },
+  { id: "supplier-invoices", label: "Supplier Invoices" },
+  { id: "supplier-payments", label: "Supplier Payments" },
 ];
 
 export function ProcurementTabs() {
@@ -37,6 +41,8 @@ export function ProcurementTabs() {
 
       {activeTab === "purchase-orders" && <PurchaseOrderPanel />}
       {activeTab === "grns" && <GrnPanel />}
+      {activeTab === "supplier-invoices" && <SupplierInvoicePanel />}
+      {activeTab === "supplier-payments" && <SupplierPaymentPanel />}
     </div>
   );
 }

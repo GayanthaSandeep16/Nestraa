@@ -48,7 +48,12 @@ export function MovementsPanel() {
   const [materialId, setMaterialId] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
   const [direction, setDirection] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
+
+  // Any filter change resets to page 1.
+  useEffect(() => setPage(1), [materialId, warehouseId, direction]);
 
   useEffect(() => {
     fetch("/api/materials")
@@ -60,7 +65,7 @@ export function MovementsPanel() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ page: String(page), pageSize: "50" });
     if (materialId) params.set("materialId", materialId);
     if (warehouseId) params.set("warehouseId", warehouseId);
     if (direction) params.set("direction", direction);
@@ -68,10 +73,11 @@ export function MovementsPanel() {
     fetch(`/api/inventory/movements?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
-        setMovements(data);
+        setMovements(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
-  }, [materialId, warehouseId, direction]);
+  }, [materialId, warehouseId, direction, page]);
 
   const columns: DataTableColumn<Movement>[] = [
     { key: "date", header: "Date", render: (row) => new Date(row.createdAt).toLocaleString() },
@@ -125,7 +131,15 @@ export function MovementsPanel() {
       {loading ? (
         <p className="text-body-md text-on-surface-variant">Loading…</p>
       ) : (
-        <DataTable columns={columns} rows={movements} getRowKey={(row) => row.id} emptyMessage="No movements recorded yet." />
+        <DataTable
+          columns={columns}
+          rows={movements}
+          getRowKey={(row) => row.id}
+          emptyMessage="No movements recorded yet."
+          page={page}
+          pageCount={pageCount}
+          onPageChange={setPage}
+        />
       )}
     </div>
   );

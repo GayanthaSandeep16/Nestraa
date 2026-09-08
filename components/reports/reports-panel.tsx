@@ -33,14 +33,29 @@ interface SalesOrderRow {
   items: { quantity: string; unitPrice: string; discountPct: string }[];
 }
 
-type View = "current" | "low" | "expiring" | "sales";
+type View = "current" | "low" | "expiring" | "sales" | "financials";
 
 const views: { id: View; label: string }[] = [
   { id: "current", label: "Current Stock" },
   { id: "low", label: "Low Stock" },
   { id: "expiring", label: "Expiring Soon" },
   { id: "sales", label: "Sales Orders" },
+  { id: "financials", label: "Financials" },
 ];
+
+interface Financials {
+  totalSales: string;
+  salesThisMonth: string;
+  salesInRange: string | null;
+  owedToUs: string;
+  weOweSuppliers: string;
+  collected: string;
+  collectedThisMonth: string;
+}
+
+function money(value: string | number) {
+  return Number(value).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 function salesOrderTotal(order: SalesOrderRow) {
   return order.items.reduce((sum, item) => {
@@ -57,13 +72,20 @@ export function ReportsPanel() {
   const [low, setLow] = useState<LowStockRow[]>([]);
   const [expiring, setExpiring] = useState<ExpiringBatchRow[]>([]);
   const [sales, setSales] = useState<SalesOrderRow[]>([]);
+  const [financials, setFinancials] = useState<Financials | null>(null);
+  const [range, setRange] = useState({ from: "", to: "" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    const url = view === "sales" ? "/api/sales-orders" : `/api/inventory/stock?view=${view}`;
+    let url: string;
+    if (view === "sales") url = "/api/sales-orders";
+    else if (view === "financials") {
+      url = "/api/reports/financials";
+      if (range.from && range.to) url += `?from=${range.from}&to=${range.to}`;
+    } else url = `/api/inventory/stock?view=${view}`;
     fetch(url)
       .then(async (res) => {
         const data = await res.json();
@@ -74,10 +96,11 @@ export function ReportsPanel() {
         if (view === "low") setLow(data);
         if (view === "expiring") setExpiring(data);
         if (view === "sales") setSales(data);
+        if (view === "financials") setFinancials(data);
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [view]);
+  }, [view, range.from, range.to]);
 
   const currentColumns: DataTableColumn<CurrentStockRow>[] = [
     { key: "sku", header: "SKU", render: (row) => row.material?.sku ?? "—" },
@@ -157,13 +180,67 @@ export function ReportsPanel() {
           getRowKey={(row) => row.batchNo}
           emptyMessage="No batches expiring within 30 days."
         />
-      ) : (
+      ) : view === "sales" ? (
         <DataTable
           columns={salesColumns}
           rows={sales}
           getRowKey={(row) => row.id}
           emptyMessage="No sales orders yet."
         />
+      ) : financials ? (
+        <div className="flex flex-col gap-md">
+          <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
+            {[
+              { label: "Total sales (all-time)", value: financials.totalSales },
+              { label: "Sales this month", value: financials.salesThisMonth },
+              { label: "Collected this month", value: financials.collectedThisMonth },
+              { label: "Owed to us (customers)", value: financials.owedToUs },
+              { label: "We owe suppliers (unpaid invoices)", value: financials.weOweSuppliers },
+              { label: "Collected (all-time)", value: financials.collected },
+            ].map((card) => (
+              <div
+                key={card.label}
+                className="flex flex-col gap-xs rounded-lg border border-outline-variant bg-surface-container-lowest p-lg"
+              >
+                <dt className="text-label-sm text-on-surface-variant">{card.label}</dt>
+                <dd className="text-headline-md text-on-surface">{money(card.value)}</dd>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-end gap-md rounded-lg border border-outline-variant bg-surface-container-lowest p-lg">
+            <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
+              From
+              <input
+                type="date"
+                value={range.from}
+                onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+                className="rounded-md border border-outline-variant bg-surface px-sm py-xs text-body-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
+              To
+              <input
+                type="date"
+                value={range.to}
+                onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+                className="rounded-md border border-outline-variant bg-surface px-sm py-xs text-body-sm"
+              />
+            </label>
+            <p className="text-body-md text-on-surface">
+              Sales in range:{" "}
+              <span className="font-medium">
+                {range.from && range.to
+                  ? financials.salesInRange != null
+                    ? money(financials.salesInRange)
+                    : "—"
+                  : "pick both dates"}
+              </span>
+            </p>
+          </div>
+        </div>
+      ) : (
+        <p className="text-body-md text-on-surface-variant">No data.</p>
       )}
     </div>
   );

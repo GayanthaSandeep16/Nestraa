@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import type { GrnProcessingPath, QcResult } from "@/lib/generated/prisma/client";
 
-export function listGrns() {
+export function listGrns(opts?: { skip?: number; take?: number }) {
   return prisma.goodsReceivedNote.findMany({
     include: {
       po: true,
@@ -10,7 +10,12 @@ export function listGrns() {
       items: { include: { material: true, uom: true, batch: true } },
     },
     orderBy: { receivedAt: "desc" },
+    ...opts,
   });
+}
+
+export function countGrns() {
+  return prisma.goodsReceivedNote.count();
 }
 
 export function getGrn(id: string) {

@@ -85,14 +85,18 @@ export interface MovementFilters {
   source?: string;
 }
 
-export function listMovements(filters?: MovementFilters) {
+function movementWhere(filters?: MovementFilters): Prisma.InventoryMovementWhereInput {
+  return {
+    materialId: filters?.materialId,
+    warehouseId: filters?.warehouseId,
+    direction: filters?.direction,
+    source: filters?.source as Prisma.InventoryMovementWhereInput["source"],
+  };
+}
+
+export function listMovements(filters?: MovementFilters, opts?: { skip?: number; take?: number }) {
   return prisma.inventoryMovement.findMany({
-    where: {
-      materialId: filters?.materialId,
-      warehouseId: filters?.warehouseId,
-      direction: filters?.direction,
-      source: filters?.source as Prisma.InventoryMovementWhereInput["source"],
-    },
+    where: movementWhere(filters),
     include: {
       material: true,
       warehouse: true,
@@ -100,7 +104,12 @@ export function listMovements(filters?: MovementFilters) {
       batch: true,
     },
     orderBy: { createdAt: "desc" },
+    ...opts,
   });
+}
+
+export function countMovements(filters?: MovementFilters) {
+  return prisma.inventoryMovement.count({ where: movementWhere(filters) });
 }
 
 export async function getAvailableBatches(materialId: string, warehouseId?: string) {

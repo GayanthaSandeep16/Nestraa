@@ -1,13 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createSalesReturn, listSalesReturns } from "@/lib/services/sales-returns";
+import { countSalesReturns, createSalesReturn, listSalesReturns } from "@/lib/services/sales-returns";
 import { salesReturnSchema } from "@/lib/validation/sales-returns";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { pageResponse, parsePage } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const returns = await listSalesReturns();
-  return NextResponse.json(returns);
+async function handleGET(request: NextRequest) {
+  const page = parsePage(request);
+  if (!page) return NextResponse.json(await listSalesReturns());
+
+  const [rows, total] = await Promise.all([listSalesReturns(page), countSalesReturns()]);
+  return NextResponse.json(pageResponse(rows, total, page));
 }
 
 async function handlePOST(request: NextRequest) {

@@ -1,13 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createConsignment, listConsignments } from "@/lib/services/consignments";
+import { countConsignments, createConsignment, listConsignments } from "@/lib/services/consignments";
 import { consignmentSchema } from "@/lib/validation/consignments";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { pageResponse, parsePage } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const consignments = await listConsignments();
-  return NextResponse.json(consignments);
+async function handleGET(request: NextRequest) {
+  const page = parsePage(request);
+  if (!page) return NextResponse.json(await listConsignments());
+
+  const [rows, total] = await Promise.all([listConsignments(page), countConsignments()]);
+  return NextResponse.json(pageResponse(rows, total, page));
 }
 
 async function handlePOST(request: NextRequest) {

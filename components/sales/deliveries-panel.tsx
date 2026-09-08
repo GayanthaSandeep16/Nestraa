@@ -24,6 +24,8 @@ interface DeliveryNote {
 export function DeliveriesPanel() {
   const [notes, setNotes] = useState<DeliveryNote[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -31,18 +33,23 @@ export function DeliveriesPanel() {
   const [saving, setSaving] = useState(false);
 
   function loadNotes() {
-    return fetch("/api/delivery-notes")
+    return fetch(`/api/delivery-notes?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setNotes(data);
+        setNotes(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
 
   useEffect(() => {
-    loadNotes();
     fetch("/api/sales-invoices").then((res) => res.json()).then(setInvoices);
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadNotes();
+  }, [page]);
 
   function openForm() {
     setFormError(null);
@@ -153,6 +160,9 @@ export function DeliveriesPanel() {
         rows={notes}
         getRowKey={(note) => note.id}
         emptyMessage="No delivery notes yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

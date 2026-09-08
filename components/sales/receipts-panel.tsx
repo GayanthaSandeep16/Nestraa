@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Receipt, X } from "lucide-react";
+import { Receipt, X, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -49,7 +49,7 @@ export function ReceiptsPanel() {
   const [draft, setDraft] = useState({
     amount: "",
     paymentMethod: "cash" as (typeof paymentMethodValues)[number],
-    paymentDate: "",
+    paymentDate: new Date().toLocaleDateString("en-CA"),
     referenceNumber: "",
     notes: "",
   });
@@ -72,7 +72,7 @@ export function ReceiptsPanel() {
     setDraft({
       amount: String(balance(invoice) > 0 ? balance(invoice).toFixed(2) : ""),
       paymentMethod: "cash",
-      paymentDate: "",
+      paymentDate: new Date().toLocaleDateString("en-CA"),
       referenceNumber: "",
       notes: "",
     });
@@ -102,6 +102,8 @@ export function ReceiptsPanel() {
       setFormError("Could not record the receipt. Check the amount and try again.");
       return;
     }
+    const payment = await res.json();
+    if (payment?.id) window.open(`/api/payments/${payment.id}/pdf`, "_blank");
     setReceiptFor(null);
     await loadInvoices();
   }
@@ -134,18 +136,37 @@ export function ReceiptsPanel() {
       key: "actions",
       header: "",
       className: "text-right",
-      render: (invoice) =>
-        invoice.status === "paid" ? null : (
-          <button
-            type="button"
-            aria-label={`Record receipt for ${invoice.invoiceNo}`}
-            title="Record receipt"
-            onClick={() => openReceipt(invoice)}
-            className="rounded-md p-xs text-primary hover:bg-primary-container/30"
-          >
-            <Receipt size={16} />
-          </button>
-        ),
+      render: (invoice) => (
+        <div className="flex justify-end gap-xs">
+          {invoice.payments.length > 0 && (
+            <button
+              type="button"
+              aria-label={`Print latest receipt for ${invoice.invoiceNo}`}
+              title="Print latest receipt"
+              onClick={() =>
+                window.open(
+                  `/api/payments/${invoice.payments[invoice.payments.length - 1].id}/pdf`,
+                  "_blank"
+                )
+              }
+              className="rounded-md p-xs text-on-surface-variant hover:bg-surface-container-low"
+            >
+              <Printer size={16} />
+            </button>
+          )}
+          {invoice.status !== "paid" && (
+            <button
+              type="button"
+              aria-label={`Record receipt for ${invoice.invoiceNo}`}
+              title="Record receipt"
+              onClick={() => openReceipt(invoice)}
+              className="rounded-md p-xs text-primary hover:bg-primary-container/30"
+            >
+              <Receipt size={16} />
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
 

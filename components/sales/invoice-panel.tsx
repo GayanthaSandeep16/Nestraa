@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2, X, Truck } from "lucide-react";
+import { Plus, Trash2, X, Truck, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -60,10 +60,12 @@ const statusTones: Record<string, StatusTone> = {
   unpaid: "warning",
 };
 
+const today = () => new Date().toLocaleDateString("en-CA");
+
 const emptyValues: SalesInvoiceFormValues = {
   customerId: "",
   salesOrderId: "",
-  invoiceDate: "",
+  invoiceDate: today(),
   taxAmount: 0,
   items: [{ materialId: "", quantity: 0, unitPrice: 0, warehouseId: "", batchId: "" }],
 };
@@ -79,6 +81,8 @@ export function InvoicePanel() {
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [batchesByLine, setBatchesByLine] = useState<Record<number, AvailableBatch[]>>({});
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -97,16 +101,21 @@ export function InvoicePanel() {
   );
 
   function loadInvoices() {
-    return fetch("/api/sales-invoices")
+    return fetch(`/api/sales-invoices?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setInvoices(data);
+        setInvoices(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadInvoices();
+  }, [page]);
+
+  useEffect(() => {
     fetch("/api/customers").then((res) => res.json()).then(setCustomers);
     fetch("/api/products").then((res) => res.json()).then(setProducts);
     fetch("/api/lookups")
@@ -120,7 +129,7 @@ export function InvoicePanel() {
   function openCreateForm() {
     setFormError(null);
     setBatchesByLine({});
-    form.reset(emptyValues);
+    form.reset({ ...emptyValues, invoiceDate: today() });
     setFormOpen(true);
   }
 
@@ -222,15 +231,26 @@ export function InvoicePanel() {
       header: "",
       className: "text-right",
       render: (invoice) => (
-        <button
-          type="button"
-          aria-label={`Create delivery note for ${invoice.invoiceNo}`}
-          title="Create delivery note"
-          onClick={() => createDeliveryNote(invoice.id)}
-          className="rounded-md p-xs text-on-surface-variant hover:bg-surface-container-low"
-        >
-          <Truck size={16} />
-        </button>
+        <div className="flex justify-end gap-xs">
+          <button
+            type="button"
+            aria-label={`Print invoice ${invoice.invoiceNo}`}
+            title="Print invoice"
+            onClick={() => window.open(`/api/sales-invoices/${invoice.id}/pdf`, "_blank")}
+            className="rounded-md p-xs text-on-surface-variant hover:bg-surface-container-low"
+          >
+            <Printer size={16} />
+          </button>
+          <button
+            type="button"
+            aria-label={`Create delivery note for ${invoice.invoiceNo}`}
+            title="Create delivery note"
+            onClick={() => createDeliveryNote(invoice.id)}
+            className="rounded-md p-xs text-on-surface-variant hover:bg-surface-container-low"
+          >
+            <Truck size={16} />
+          </button>
+        </div>
       ),
     },
   ];
@@ -419,7 +439,15 @@ export function InvoicePanel() {
         </form>
       )}
 
-      <DataTable columns={columns} rows={invoices} getRowKey={(invoice) => invoice.id} emptyMessage="No invoices yet." />
+      <DataTable
+        columns={columns}
+        rows={invoices}
+        getRowKey={(invoice) => invoice.id}
+        emptyMessage="No invoices yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

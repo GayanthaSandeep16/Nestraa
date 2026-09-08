@@ -70,6 +70,8 @@ export function SalesOrderPanel() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -81,10 +83,11 @@ export function SalesOrderPanel() {
   const { fields, append, remove } = useFieldArray({ control: createForm.control, name: "items" });
 
   function loadOrders() {
-    return fetch("/api/sales-orders")
+    return fetch(`/api/sales-orders?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setOrders(data);
+        setOrders(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -102,10 +105,14 @@ export function SalesOrderPanel() {
   }
 
   useEffect(() => {
-    loadOrders();
     loadCustomers();
     loadProducts();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadOrders();
+  }, [page]);
 
   async function prefillPrice(index: number, materialId: string) {
     const customerId = createForm.watch("customerId");
@@ -317,7 +324,15 @@ export function SalesOrderPanel() {
         </form>
       )}
 
-      <DataTable columns={columns} rows={orders} getRowKey={(order) => order.id} emptyMessage="No sales orders yet." />
+      <DataTable
+        columns={columns}
+        rows={orders}
+        getRowKey={(order) => order.id}
+        emptyMessage="No sales orders yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

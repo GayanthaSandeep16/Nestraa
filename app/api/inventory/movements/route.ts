@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { listMovements, type MovementFilters } from "@/lib/services/inventory";
+import { countMovements, listMovements, type MovementFilters } from "@/lib/services/inventory";
+import { pageResponse, parsePage } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
 async function handleGET(request: NextRequest) {
@@ -12,8 +13,11 @@ async function handleGET(request: NextRequest) {
     source: searchParams.get("source") ?? undefined,
   };
 
-  const movements = await listMovements(filters);
-  return NextResponse.json(movements);
+  const page = parsePage(request);
+  if (!page) return NextResponse.json(await listMovements(filters));
+
+  const [rows, total] = await Promise.all([listMovements(filters, page), countMovements(filters)]);
+  return NextResponse.json(pageResponse(rows, total, page));
 }
 
 export const GET = withModuleAccess("inventory", handleGET);

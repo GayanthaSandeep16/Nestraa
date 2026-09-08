@@ -5,8 +5,12 @@ const include = {
   items: { include: { material: true } },
 } as const;
 
-export function listSalesOrders() {
-  return prisma.salesOrder.findMany({ include, orderBy: { createdAt: "desc" } });
+export function listSalesOrders(opts?: { skip?: number; take?: number }) {
+  return prisma.salesOrder.findMany({ include, orderBy: { createdAt: "desc" }, ...opts });
+}
+
+export function countSalesOrders() {
+  return prisma.salesOrder.count();
 }
 
 export function getSalesOrder(id: string) {

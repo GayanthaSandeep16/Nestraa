@@ -1,11 +1,16 @@
 import { prisma } from "@/lib/db/prisma";
 import type { PoStatus } from "@/lib/generated/prisma/client";
 
-export function listPurchaseOrders() {
+export function listPurchaseOrders(opts?: { skip?: number; take?: number }) {
   return prisma.purchaseOrder.findMany({
     include: { supplier: true, items: { include: { material: true, uom: true } } },
     orderBy: { createdAt: "desc" },
+    ...opts,
   });
+}
+
+export function countPurchaseOrders() {
+  return prisma.purchaseOrder.count();
 }
 
 export function getPurchaseOrder(id: string) {

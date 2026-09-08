@@ -142,8 +142,17 @@ enum LedgerTransactionType {
   delivery
   payment
   return
+  invoice
 
   @@map("ledger_transaction_type")
+}
+
+enum SupplierLedgerTransactionType {
+  invoice
+  payment
+  return
+
+  @@map("supplier_ledger_transaction_type")
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +225,9 @@ model AppUser {
   paymentsRecorded           Payment[]
   consignmentReturnsVerified ConsignmentReturn[] @relation("ConsignmentReturnVerifier")
   consignmentReturnsCreated  ConsignmentReturn[] @relation("ConsignmentReturnCreator")
+  salesReturnsCreated        SalesReturn[]       @relation("SalesReturnCreator")
+  supplierInvoicesCreated    SupplierInvoice[]
+  supplierPaymentsRecorded   SupplierPayment[]
 
   @@map("app_users")
 }
@@ -275,6 +287,8 @@ model Supplier {
   purchaseOrders     PurchaseOrder[]
   goodsReceivedNotes GoodsReceivedNote[]
   supplierInvoices   SupplierInvoice[]
+  supplierPayments   SupplierPayment[]
+  supplierLedger     SupplierLedger[]
   purchaseReturns    PurchaseReturn[]
 
   @@map("suppliers")
@@ -298,12 +312,13 @@ model Customer {
   salesOrders     SalesOrder[]
   salesInvoices   SalesInvoice[]
 
-  retailerProfile     RetailerProfile?
-  consignments        Consignment[]
-  payments            Payment[]
-  consignmentReturns  ConsignmentReturn[]
-  retailerLedger      RetailerLedger[]
-  heldInventory       InventoryMovement[]
+  retailerProfile    RetailerProfile?
+  consignments       Consignment[]
+  payments           Payment[]
+  consignmentReturns ConsignmentReturn[]
+  salesReturns       SalesReturn[]
+  retailerLedger     RetailerLedger[]
+  heldInventory      InventoryMovement[]
 
   @@map("customers")
 }
@@ -556,11 +571,16 @@ model SupplierInvoice {
   invoiceDate DateTime @map("invoice_date") @db.Date
   totalAmount Decimal  @map("total_amount") @db.Decimal(14, 2)
   taxAmount   Decimal  @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  // Derived cache, recomputed transactionally: unpaid | partially_paid | paid
+  // (see recomputeSupplierInvoiceStatus in lib/services/supplier-invoices.ts).
   status      String   @default("unpaid")
+  createdBy   String?  @map("created_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   supplier Supplier           @relation(fields: [supplierId], references: [id])
   grn      GoodsReceivedNote? @relation(fields: [grnId], references: [id])
+  creator  AppUser?           @relation(fields: [createdBy], references: [id])
+  payments SupplierPayment[]
 
   @@map("supplier_invoices")
 }
@@ -807,6 +827,10 @@ model CustomerPricing {
   customer Customer @relation(fields: [customerId], references: [id])
   material Material @relation(fields: [materialId], references: [id])
 
+  // Partial unique index "customer_pricing_open_price_key" (one open price per
+  // customer+material, WHERE effective_to IS NULL) is SQL-only — see the
+  // 20260909000000_extend_sales_module migration.
+  @@index([customerId, materialId, effectiveFrom], map: "idx_customer_pricing_lookup")
   @@map("customer_pricing")
 }
 
@@ -850,6 +874,8 @@ model SalesInvoice {
   invoiceDate  DateTime @default(now()) @map("invoice_date") @db.Date
   totalAmount  Decimal  @map("total_amount") @db.Decimal(14, 2)
   taxAmount    Decimal  @default(0) @map("tax_amount") @db.Decimal(14, 2)
+  // Derived cache, recomputed transactionally: unpaid | partially_paid | paid
+  // (see recomputeInvoiceStatus in lib/services/sales-invoices.ts).
   status       String   @default("unpaid")
   createdBy    String?  @map("created_by") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
@@ -861,6 +887,7 @@ model SalesInvoice {
   items         SalesInvoiceItem[]
   deliveryNotes DeliveryNote[]
   salesReturns  SalesReturn[]
+  payments      Payment[]
 
   @@map("sales_invoices")
 }
@@ -886,6 +913,8 @@ model DeliveryNote {
   invoiceId   String?   @map("invoice_id") @db.Uuid
   deliveredAt DateTime? @map("delivered_at") @db.Timestamptz
   deliveredBy String?   @map("delivered_by") @db.Uuid
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   invoice   SalesInvoice? @relation(fields: [invoiceId], references: [id])
   deliverer AppUser?      @relation(fields: [deliveredBy], references: [id])
@@ -894,23 +923,29 @@ model DeliveryNote {
 }
 
 model SalesReturn {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  returnNo  String   @unique @map("return_no")
-  invoiceId String?  @map("invoice_id") @db.Uuid
-  reason    String?
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnNo   String   @unique @map("return_no")
+  invoiceId  String?  @map("invoice_id") @db.Uuid
+  customerId String   @map("customer_id") @db.Uuid
+  reason     String?
+  createdBy  String?  @map("created_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  invoice SalesInvoice?     @relation(fields: [invoiceId], references: [id])
-  items   SalesReturnItem[]
+  invoice  SalesInvoice?     @relation(fields: [invoiceId], references: [id])
+  customer Customer          @relation(fields: [customerId], references: [id])
+  creator  AppUser?          @relation("SalesReturnCreator", fields: [createdBy], references: [id])
+  items    SalesReturnItem[]
 
   @@map("sales_returns")
 }
 
 model SalesReturnItem {
-  id         String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  returnId   String  @map("return_id") @db.Uuid
-  materialId String  @map("material_id") @db.Uuid
-  quantity   Decimal @db.Decimal(14, 3)
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnId      String              @map("return_id") @db.Uuid
+  materialId    String              @map("material_id") @db.Uuid
+  quantity      Decimal             @db.Decimal(14, 3)
+  unitPrice     Decimal             @map("unit_price") @db.Decimal(14, 4)
+  qualityStatus ReturnQualityStatus @map("quality_status")
 
   return   SalesReturn @relation(fields: [returnId], references: [id], onDelete: Cascade)
   material Material    @relation(fields: [materialId], references: [id])
@@ -999,13 +1034,16 @@ model Payment {
   paymentMethod   PaymentMethod @map("payment_method")
   referenceNumber String?       @map("reference_number")
   notes           String?
+  invoiceId       String?       @map("invoice_id") @db.Uuid
   recordedBy      String?       @map("recorded_by") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
 
-  customer    Customer     @relation(fields: [customerId], references: [id])
-  consignment Consignment? @relation(fields: [consignmentId], references: [id])
-  recorder    AppUser?     @relation(fields: [recordedBy], references: [id])
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  consignment Consignment?  @relation(fields: [consignmentId], references: [id])
+  invoice     SalesInvoice? @relation(fields: [invoiceId], references: [id])
+  recorder    AppUser?      @relation(fields: [recordedBy], references: [id])
 
+  @@index([invoiceId], map: "idx_payments_invoice")
   @@map("payments")
 }
 
@@ -1062,6 +1100,49 @@ model RetailerLedger {
 
   @@index([customerId, createdAt], name: "idx_retailer_ledger_customer")
   @@map("retailer_ledger")
+}
+
+// Supplier-side AP mirror of Payment. Append-only — a correction is a new
+// offsetting row, not an edit of a past payment.
+model SupplierPayment {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId        String        @map("supplier_id") @db.Uuid
+  supplierInvoiceId String?       @map("supplier_invoice_id") @db.Uuid
+  paymentDate       DateTime      @default(now()) @map("payment_date") @db.Date
+  amount            Decimal       @db.Decimal(14, 2)
+  paymentMethod     PaymentMethod @map("payment_method")
+  referenceNumber   String?       @map("reference_number")
+  notes             String?
+  recordedBy        String?       @map("recorded_by") @db.Uuid
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  supplier Supplier         @relation(fields: [supplierId], references: [id])
+  invoice  SupplierInvoice? @relation(fields: [supplierInvoiceId], references: [id])
+  recorder AppUser?         @relation(fields: [recordedBy], references: [id])
+
+  @@index([supplierInvoiceId], map: "idx_supplier_payments_invoice")
+  @@map("supplier_payments")
+}
+
+// Append-only AP journal mirroring RetailerLedger. Same formula
+// (runningBalance = prev + debit − credit); an invoice debits (we owe more),
+// a payment credits (we owe less), so a positive balance = we owe the supplier.
+model SupplierLedger {
+  id              String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supplierId      String                        @map("supplier_id") @db.Uuid
+  transactionDate DateTime                      @default(now()) @map("transaction_date") @db.Timestamptz
+  transactionType SupplierLedgerTransactionType @map("transaction_type")
+  referenceId     String                        @map("reference_id") @db.Uuid
+  description     String?
+  debit           Decimal                       @default(0) @db.Decimal(14, 2)
+  credit          Decimal                       @default(0) @db.Decimal(14, 2)
+  runningBalance  Decimal                       @map("running_balance") @db.Decimal(14, 2)
+  createdAt       DateTime                      @default(now()) @map("created_at") @db.Timestamptz
+
+  supplier Supplier @relation(fields: [supplierId], references: [id])
+
+  @@index([supplierId, createdAt], name: "idx_supplier_ledger_supplier")
+  @@map("supplier_ledger")
 }
 
 // ---------------------------------------------------------------------------
