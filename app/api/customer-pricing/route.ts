@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createCustomerPricing, listCustomerPricing } from "@/lib/services/customer-pricing";
+import { countCustomerPricing, createCustomerPricing, listCustomerPricing } from "@/lib/services/customer-pricing";
 import { customerPricingSchema } from "@/lib/validation/customer-pricing";
 import { toErrorResponse } from "@/lib/api/errors";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const rows = await listCustomerPricing();
-  return NextResponse.json(rows);
+async function handleGET(request: NextRequest) {
+  return NextResponse.json(await paginate(request, (p) => listCustomerPricing(p), countCustomerPricing));
 }
 
 async function handlePOST(request: NextRequest) {

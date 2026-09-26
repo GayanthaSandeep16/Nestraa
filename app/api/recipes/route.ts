@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createRecipe, listRecipes } from "@/lib/services/recipes";
+import { countRecipes, createRecipe, listRecipes } from "@/lib/services/recipes";
 import { recipeSchema } from "@/lib/validation/recipes";
 import { toErrorResponse } from "@/lib/api/errors";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const recipes = await listRecipes();
-  return NextResponse.json(recipes);
+async function handleGET(request: NextRequest) {
+  return NextResponse.json(await paginate(request, (p) => listRecipes(p), countRecipes));
 }
 
 async function handlePOST(request: NextRequest) {

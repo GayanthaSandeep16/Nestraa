@@ -91,6 +91,8 @@ export function ProductionOrderPanel() {
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [processes, setProcesses] = useState<ProcessDefinition[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -112,10 +114,11 @@ export function ProductionOrderPanel() {
   const selectedProcess = processes.find((process) => process.id === selectedProcessId);
 
   function loadOrders() {
-    return fetch("/api/production-orders")
+    return fetch(`/api/production-orders?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setOrders(data);
+        setOrders(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -133,10 +136,14 @@ export function ProductionOrderPanel() {
   }
 
   useEffect(() => {
-    loadOrders();
     loadProcesses();
     loadWarehouses();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadOrders();
+  }, [page]);
 
   function openCreateForm() {
     setFormError(null);
@@ -472,7 +479,15 @@ export function ProductionOrderPanel() {
         </form>
       )}
 
-      <DataTable columns={columns} rows={orders} getRowKey={(order) => order.id} emptyMessage="No production orders yet." />
+      <DataTable
+        columns={columns}
+        rows={orders}
+        getRowKey={(order) => order.id}
+        emptyMessage="No production orders yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

@@ -1,12 +1,17 @@
 import { prisma } from "@/lib/db/prisma";
 import type { MaterialType } from "@/lib/generated/prisma/client";
 
-export function listMaterials() {
+export function listMaterials(opts?: { skip?: number; take?: number }) {
   return prisma.material.findMany({
     where: { deletedAt: null },
     include: { baseUom: true, category: true },
     orderBy: { name: "asc" },
+    ...opts,
   });
+}
+
+export function countMaterials() {
+  return prisma.material.count({ where: { deletedAt: null } });
 }
 
 export function getMaterial(id: string) {

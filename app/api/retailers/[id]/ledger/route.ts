@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getRetailer } from "@/lib/services/retailers";
 import { countLedger, getLedger, getOutstandingBalance } from "@/lib/services/retailer-ledger";
-import { parsePage } from "@/lib/api/pagination";
+import { pageArgs, parsePage } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
 // [id] is the RetailerProfile id (matches the other /api/retailers/[id]
@@ -15,7 +15,7 @@ async function handleGET(request: NextRequest, ctx: RouteContext<"/api/retailers
 
   const page = parsePage(request);
   const [entries, outstandingBalance, total] = await Promise.all([
-    getLedger(retailer.customerId, page ?? undefined),
+    getLedger(retailer.customerId, page ? pageArgs(page) : undefined),
     getOutstandingBalance(retailer.customerId),
     page ? countLedger(retailer.customerId) : Promise.resolve(0),
   ]);

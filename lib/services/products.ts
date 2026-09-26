@@ -1,12 +1,19 @@
 import { prisma } from "@/lib/db/prisma";
 import { generateSku } from "@/lib/services/materials";
 
-export function listProducts() {
+const productWhere = { materialType: "finished_good", deletedAt: null } as const;
+
+export function listProducts(opts?: { skip?: number; take?: number }) {
   return prisma.material.findMany({
-    where: { materialType: "finished_good", deletedAt: null },
+    where: productWhere,
     include: { baseUom: true, category: true },
     orderBy: { name: "asc" },
+    ...opts,
   });
+}
+
+export function countProducts() {
+  return prisma.material.count({ where: productWhere });
 }
 
 export function getProduct(id: string) {

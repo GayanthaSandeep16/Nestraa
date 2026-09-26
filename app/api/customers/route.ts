@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createCustomer, listCustomers } from "@/lib/services/customers";
+import { countCustomers, createCustomer, listCustomers } from "@/lib/services/customers";
 import { customerSchema } from "@/lib/validation/customers";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const customers = await listCustomers();
-  return NextResponse.json(customers);
+async function handleGET(request: NextRequest) {
+  return NextResponse.json(await paginate(request, (p) => listCustomers(p), countCustomers));
 }
 
 async function handlePOST(request: NextRequest) {

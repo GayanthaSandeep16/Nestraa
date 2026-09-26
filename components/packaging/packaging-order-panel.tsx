@@ -91,6 +91,8 @@ export function PackagingOrderPanel() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [packageSizes, setPackageSizes] = useState<PackageSize[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -112,10 +114,11 @@ export function PackagingOrderPanel() {
   const finishedProducts = materials.filter((material) => material.materialType === "finished_good");
 
   function loadOrders() {
-    return fetch("/api/packaging-orders")
+    return fetch(`/api/packaging-orders?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setOrders(data);
+        setOrders(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -136,10 +139,14 @@ export function PackagingOrderPanel() {
   }
 
   useEffect(() => {
-    loadOrders();
     loadMaterials();
     loadLookups();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadOrders();
+  }, [page]);
 
   function openCreateForm() {
     setFormError(null);
@@ -487,7 +494,15 @@ export function PackagingOrderPanel() {
         </form>
       )}
 
-      <DataTable columns={columns} rows={orders} getRowKey={(order) => order.id} emptyMessage="No packaging orders yet." />
+      <DataTable
+        columns={columns}
+        rows={orders}
+        getRowKey={(order) => order.id}
+        emptyMessage="No packaging orders yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

@@ -43,6 +43,8 @@ export function PricingPanel() {
   const [rows, setRows] = useState<PriceRow[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -53,19 +55,24 @@ export function PricingPanel() {
   });
 
   function loadRows() {
-    return fetch("/api/customer-pricing")
-      .then((res) => res.json())
+    return fetch(`/api/customer-pricing?page=${page}&pageSize=50`)
+      .then((res) => (res.ok ? res.json() : { rows: [], pageCount: 1 }))
       .then((data) => {
-        setRows(data);
+        setRows(data.rows ?? []);
+        setPageCount(data.pageCount ?? 1);
         setLoading(false);
       });
   }
 
   useEffect(() => {
-    loadRows();
     fetch("/api/customers").then((res) => res.json()).then(setCustomers);
     fetch("/api/products").then((res) => res.json()).then(setProducts);
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadRows();
+  }, [page]);
 
   function openForm() {
     setFormError(null);
@@ -230,6 +237,9 @@ export function PricingPanel() {
         rows={rows}
         getRowKey={(row) => row.id}
         emptyMessage="No customer-specific prices yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

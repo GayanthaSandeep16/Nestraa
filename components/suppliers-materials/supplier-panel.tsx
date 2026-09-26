@@ -26,6 +26,8 @@ const emptyValues: SupplierFormValues = {
 
 export function SupplierPanel() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,17 +44,19 @@ export function SupplierPanel() {
   });
 
   function loadSuppliers() {
-    return fetch("/api/suppliers")
+    return fetch(`/api/suppliers?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setSuppliers(data);
+        setSuppliers(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadSuppliers();
-  }, []);
+  }, [page]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -236,6 +240,9 @@ export function SupplierPanel() {
         getRowKey={(s) => s.id}
         onRowClick={openEditForm}
         emptyMessage="No suppliers yet. Add your first supplier to get started."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

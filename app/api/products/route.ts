@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createProduct, listProducts } from "@/lib/services/products";
+import { countProducts, createProduct, listProducts } from "@/lib/services/products";
 import { productSchema } from "@/lib/validation/products";
 import { toErrorResponse } from "@/lib/api/errors";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const products = await listProducts();
-  return NextResponse.json(products);
+async function handleGET(request: NextRequest) {
+  return NextResponse.json(await paginate(request, (p) => listProducts(p), countProducts));
 }
 
 async function handlePOST(request: NextRequest) {

@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createBlendOrder, listBlendOrders } from "@/lib/services/blend-orders";
+import { countBlendOrders, createBlendOrder, listBlendOrders } from "@/lib/services/blend-orders";
 import { blendOrderSchema } from "@/lib/validation/blend-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const orders = await listBlendOrders();
-  return NextResponse.json(orders);
+async function handleGET(request: NextRequest) {
+  return NextResponse.json(await paginate(request, (p) => listBlendOrders(p), countBlendOrders));
 }
 
 async function handlePOST(request: NextRequest) {

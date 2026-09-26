@@ -36,6 +36,8 @@ const emptyValues: CustomerFormValues = {
 
 export function CustomerPanel() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -52,17 +54,19 @@ export function CustomerPanel() {
   });
 
   function loadCustomers() {
-    return fetch("/api/customers")
+    return fetch(`/api/customers?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setCustomers(data);
+        setCustomers(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadCustomers();
-  }, []);
+  }, [page]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -265,6 +269,9 @@ export function CustomerPanel() {
         getRowKey={(c) => c.id}
         onRowClick={openEditForm}
         emptyMessage="No customers yet. Add your first customer to get started."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

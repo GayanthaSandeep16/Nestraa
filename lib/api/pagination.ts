@@ -10,6 +10,12 @@ export interface Page {
   pageSize: number;
 }
 
+// The subset safe to forward straight into a Prisma findMany. `Page` carries
+// page/pageSize too (for pageResponse) and Prisma rejects unknown keys, so
+// service list fns must only ever receive this.
+export type PageArgs = Pick<Page, "skip" | "take">;
+export const pageArgs = (p: Page): PageArgs => ({ skip: p.skip, take: p.take });
+
 // Returns null when the request carries no `?page` — callers then fall back to
 // the pre-pagination behaviour (return the whole list), keeping form-selector
 // and PDF consumers of the same endpoint working unchanged.
@@ -40,11 +46,11 @@ export function pageResponse<T>(rows: T[], total: number, page: Page) {
 // consumers), otherwise a { rows, total, pageCount, ... } envelope.
 export async function paginate<T>(
   request: NextRequest,
-  list: (page?: Page) => Promise<T[]>,
+  list: (args?: PageArgs) => Promise<T[]>,
   count: () => Promise<number>
 ) {
   const page = parsePage(request);
   if (!page) return list();
-  const [rows, total] = await Promise.all([list(page), count()]);
+  const [rows, total] = await Promise.all([list(pageArgs(page)), count()]);
   return pageResponse(rows, total, page);
 }

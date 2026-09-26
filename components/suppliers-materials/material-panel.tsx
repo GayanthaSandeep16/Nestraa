@@ -50,6 +50,8 @@ const emptyValues: MaterialFormValues = {
 export function MaterialPanel() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [lookups, setLookups] = useState<Lookups>({ unitsOfMeasure: [], categories: [] });
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,10 +69,11 @@ export function MaterialPanel() {
   });
 
   function loadMaterials() {
-    return fetch("/api/materials")
+    return fetch(`/api/materials?page=${page}&pageSize=15`)
       .then((res) => res.json())
       .then((data) => {
-        setMaterials(data);
+        setMaterials(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -82,9 +85,13 @@ export function MaterialPanel() {
   }
 
   useEffect(() => {
-    loadMaterials();
     loadLookups();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadMaterials();
+  }, [page]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -297,6 +304,9 @@ export function MaterialPanel() {
         getRowKey={(m) => m.id}
         onRowClick={openEditForm}
         emptyMessage="No materials yet. Add your first material to get started."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

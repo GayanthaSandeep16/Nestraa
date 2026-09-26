@@ -42,6 +42,8 @@ const emptyValues: ProductFormValues = {
 export function ProductPanel() {
   const [products, setProducts] = useState<Product[]>([]);
   const [lookups, setLookups] = useState<Lookups>({ unitsOfMeasure: [], categories: [] });
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,10 +61,11 @@ export function ProductPanel() {
   });
 
   function loadProducts() {
-    return fetch("/api/products")
+    return fetch(`/api/products?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setProducts(data);
+        setProducts(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -74,9 +77,13 @@ export function ProductPanel() {
   }
 
   useEffect(() => {
-    loadProducts();
     loadLookups();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadProducts();
+  }, [page]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -276,6 +283,9 @@ export function ProductPanel() {
         getRowKey={(p) => p.id}
         onRowClick={openEditForm}
         emptyMessage="No products yet. Add your first finished product to get started."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

@@ -3,15 +3,11 @@ import { countSalesInvoices, createSalesInvoice, listSalesInvoices } from "@/lib
 import { salesInvoiceSchema } from "@/lib/validation/sales-invoices";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
-import { pageResponse, parsePage } from "@/lib/api/pagination";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
 async function handleGET(request: NextRequest) {
-  const page = parsePage(request);
-  if (!page) return NextResponse.json(await listSalesInvoices());
-
-  const [rows, total] = await Promise.all([listSalesInvoices(page), countSalesInvoices()]);
-  return NextResponse.json(pageResponse(rows, total, page));
+  return NextResponse.json(await paginate(request, (p) => listSalesInvoices(p), countSalesInvoices));
 }
 
 async function handlePOST(request: NextRequest) {

@@ -96,6 +96,8 @@ export function BlendOrderPanel() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [currentStock, setCurrentStock] = useState<StockRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -118,10 +120,11 @@ export function BlendOrderPanel() {
   const selectedRecipe = recipes.find((recipe) => recipe.id === selectedRecipeId);
 
   function loadOrders() {
-    return fetch("/api/blend-orders")
+    return fetch(`/api/blend-orders?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setOrders(data);
+        setOrders(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -139,10 +142,14 @@ export function BlendOrderPanel() {
   }
 
   useEffect(() => {
-    loadOrders();
     loadRecipes();
     loadWarehouses();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadOrders();
+  }, [page]);
 
   useEffect(() => {
     if (!selectedRecipe) {
@@ -524,7 +531,15 @@ export function BlendOrderPanel() {
         </form>
       )}
 
-      <DataTable columns={columns} rows={orders} getRowKey={(order) => order.id} emptyMessage="No blend orders yet." />
+      <DataTable
+        columns={columns}
+        rows={orders}
+        getRowKey={(order) => order.id}
+        emptyMessage="No blend orders yet."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

@@ -55,6 +55,8 @@ export function RecipePanel() {
   const [products, setProducts] = useState<Material[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [lookups, setLookups] = useState<Lookups>({ unitsOfMeasure: [] });
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -80,10 +82,11 @@ export function RecipePanel() {
   }, 0);
 
   function loadRecipes() {
-    return fetch("/api/recipes")
+    return fetch(`/api/recipes?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setRecipes(data);
+        setRecipes(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -107,11 +110,15 @@ export function RecipePanel() {
   }
 
   useEffect(() => {
-    loadRecipes();
     loadProducts();
     loadMaterials();
     loadLookups();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadRecipes();
+  }, [page]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -352,6 +359,9 @@ export function RecipePanel() {
         getRowKey={(r) => r.id}
         onRowClick={openEditForm}
         emptyMessage="No recipes yet. Add your first blend recipe to get started."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

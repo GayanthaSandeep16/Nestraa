@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createPackagingOrder, listPackagingOrders } from "@/lib/services/packaging-orders";
+import { countPackagingOrders, createPackagingOrder, listPackagingOrders } from "@/lib/services/packaging-orders";
 import { packagingOrderSchema } from "@/lib/validation/packaging-orders";
 import { getCurrentAppUser } from "@/lib/services/current-user";
 import { toErrorResponse } from "@/lib/api/errors";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const orders = await listPackagingOrders();
-  return NextResponse.json(orders);
+async function handleGET(request: NextRequest) {
+  return NextResponse.json(await paginate(request, (p) => listPackagingOrders(p), countPackagingOrders));
 }
 
 async function handlePOST(request: NextRequest) {

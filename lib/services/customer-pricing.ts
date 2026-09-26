@@ -2,11 +2,16 @@ import { prisma } from "@/lib/db/prisma";
 
 const include = { customer: true, material: true } as const;
 
-export function listCustomerPricing() {
+export function listCustomerPricing(opts?: { skip?: number; take?: number }) {
   return prisma.customerPricing.findMany({
     include,
     orderBy: [{ customerId: "asc" }, { effectiveFrom: "desc" }],
+    ...opts,
   });
+}
+
+export function countCustomerPricing() {
+  return prisma.customerPricing.count();
 }
 
 // The price in force for a customer+material on a date: the row whose window

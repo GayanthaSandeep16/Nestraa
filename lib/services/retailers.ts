@@ -19,13 +19,18 @@ async function attachOutstandingBalances<T extends { customerId: string }>(retai
   return retailers.map((r) => ({ ...r, outstandingBalance: balanceByCustomer.get(r.customerId) ?? new Prisma.Decimal(0) }));
 }
 
-export async function listRetailers() {
+export async function listRetailers(opts?: { skip?: number; take?: number }) {
   const retailers = await prisma.retailerProfile.findMany({
     where: { customer: { deletedAt: null } },
     include,
     orderBy: { createdAt: "desc" },
+    ...opts,
   });
   return attachOutstandingBalances(retailers);
+}
+
+export function countRetailers() {
+  return prisma.retailerProfile.count({ where: { customer: { deletedAt: null } } });
 }
 
 export function getRetailer(id: string) {

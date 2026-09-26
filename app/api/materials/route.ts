@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createMaterial, listMaterials } from "@/lib/services/materials";
+import { countMaterials, createMaterial, listMaterials } from "@/lib/services/materials";
 import { materialSchema } from "@/lib/validation/materials";
 import { toErrorResponse } from "@/lib/api/errors";
+import { paginate } from "@/lib/api/pagination";
 import { withModuleAccess } from "@/lib/auth/guard";
 
-async function handleGET() {
-  const materials = await listMaterials();
-  return NextResponse.json(materials);
+async function handleGET(request: NextRequest) {
+  return NextResponse.json(await paginate(request, (p) => listMaterials(p), countMaterials));
 }
 
 async function handlePOST(request: NextRequest) {

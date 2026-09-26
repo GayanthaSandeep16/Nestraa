@@ -68,6 +68,8 @@ export function PurchaseOrderPanel() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [lookups, setLookups] = useState<Lookups>({ unitsOfMeasure: [] });
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -86,10 +88,11 @@ export function PurchaseOrderPanel() {
   const { fields, append, remove } = useFieldArray({ control, name: "items" });
 
   function loadPurchaseOrders() {
-    return fetch("/api/purchase-orders")
+    return fetch(`/api/purchase-orders?page=${page}&pageSize=50`)
       .then((res) => res.json())
       .then((data) => {
-        setPurchaseOrders(data);
+        setPurchaseOrders(data.rows);
+        setPageCount(data.pageCount);
         setLoading(false);
       });
   }
@@ -113,11 +116,15 @@ export function PurchaseOrderPanel() {
   }
 
   useEffect(() => {
-    loadPurchaseOrders();
     loadSuppliers();
     loadMaterials();
     loadLookups();
   }, []);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadPurchaseOrders();
+  }, [page]);
 
   function openCreateForm() {
     setFormError(null);
@@ -334,6 +341,9 @@ export function PurchaseOrderPanel() {
         rows={purchaseOrders}
         getRowKey={(po) => po.id}
         emptyMessage="No purchase orders yet. Create one to get started."
+        page={page}
+        pageCount={pageCount}
+        onPageChange={setPage}
       />
     </div>
   );

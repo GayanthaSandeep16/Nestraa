@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/db/prisma";
 
-export function listRecipes() {
+export function listRecipes(opts?: { skip?: number; take?: number }) {
   return prisma.recipe.findMany({
     include: { outputMaterial: true, ingredients: { include: { material: true, uom: true } } },
     orderBy: { name: "asc" },
+    ...opts,
   });
+}
+
+export function countRecipes() {
+  return prisma.recipe.count();
 }
 
 export function getRecipe(id: string) {
