@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import type { ReturnQualityStatus } from "@/lib/generated/prisma/client";
@@ -73,7 +74,7 @@ export function recordConsignmentReturn(data: ConsignmentReturnInput, actorId?: 
         .sub(consignmentItem.quantitySold)
         .sub(consignmentItem.quantityReturned);
       if (remaining.lt(entry.quantity)) {
-        throw new Error(`Return quantity exceeds remaining held stock for ${consignmentItem.material.name}`);
+        throw new UserError(`Return quantity exceeds remaining held stock for ${consignmentItem.material.name}`);
       }
 
       const source = movementSourceByQuality[entry.qualityStatus];

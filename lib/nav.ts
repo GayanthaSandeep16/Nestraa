@@ -11,6 +11,7 @@ import {
   BarChart3,
   Truck,
   ShieldCheck,
+  Tag,
   type LucideIcon,
 } from "lucide-react";
 import type { ModuleKey } from "@/lib/auth/roles";
@@ -30,6 +31,7 @@ export const navItems: NavItem[] = [
 
   { href: "/suppliers-materials", label: "Suppliers & Materials", icon: BookOpen, group: "Setup", moduleKey: "suppliers-materials" },
   { href: "/product-catalog", label: "Product Catalog & BOM", icon: Factory, group: "Setup", moduleKey: "product-catalog" },
+  { href: "/cost-management", label: "Cost Management", icon: Tag, group: "Setup", moduleKey: "cost-management" },
 
   { href: "/procurement", label: "Procurement & GRN", icon: ShoppingCart, group: "Operations", moduleKey: "procurement" },
   { href: "/inventory", label: "Inventory Ledger", icon: Warehouse, group: "Operations", moduleKey: "inventory" },

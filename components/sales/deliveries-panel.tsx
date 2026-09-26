@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { errorMessage } from "@/lib/http";
 
 interface Invoice {
   id: string;
@@ -68,7 +69,7 @@ export function DeliveriesPanel() {
     });
     setSaving(false);
     if (!res.ok) {
-      setFormError("Could not create the delivery note. Pick an invoice and try again.");
+      setFormError(await errorMessage(res, "Could not create the delivery note. Pick an invoice and try again."));
       return;
     }
     setFormOpen(false);

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { supplierSchema, type SupplierFormValues } from "@/lib/validation/suppliers";
+import { errorMessage } from "@/lib/http";
 
 interface Supplier extends SupplierFormValues {
   id: string;
@@ -97,7 +98,7 @@ export function SupplierPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save supplier. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save supplier. Check the fields and try again."));
       return;
     }
 

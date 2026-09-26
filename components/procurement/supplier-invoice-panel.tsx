@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { errorMessage } from "@/lib/http";
 
 interface Supplier {
   id: string;
@@ -102,7 +103,7 @@ export function SupplierInvoicePanel() {
     });
     setSaving(false);
     if (!res.ok) {
-      setFormError("Could not save the invoice. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save the invoice. Check the fields and try again."));
       return;
     }
     setFormOpen(false);

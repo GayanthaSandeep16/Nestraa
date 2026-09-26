@@ -1,5 +1,7 @@
+import { UserError } from "@/lib/api/errors";
 import { prisma } from "@/lib/db/prisma";
 import type { QcResult } from "@/lib/generated/prisma/client";
+import { generateBatchNo } from "@/lib/services/inventory";
 
 const include = {
   processedMaterial: true,
@@ -49,7 +51,7 @@ export async function createPackagingOrder(data: PackagingOrderInput) {
 }
 
 export function cancelPackagingOrder(id: string) {
-  return prisma.packagingOrder.update({ where: { id }, data: { status: "cancelled" } });
+  return prisma.packagingOrder.update({ where: { id, status: "draft" }, data: { status: "cancelled" } });
 }
 
 export interface PackagingOrderInputBatch {
@@ -64,7 +66,6 @@ export interface PackagingOrderCompletionInput {
     quantity: number;
     uomId: string;
     warehouseId: string;
-    unitCost?: number | null;
     manufactureDate?: Date | null;
     expiryDate?: Date | null;
     qcResult?: QcResult | null;
@@ -75,17 +76,24 @@ export interface PackagingOrderCompletionInput {
 
 export function completePackagingOrder(id: string, data: PackagingOrderCompletionInput) {
   return prisma.$transaction(async (tx) => {
+    // Atomically claim the order first so a double-submit (or completing a
+    // cancelled order) can't create a second output batch / double stock.
+    const claimed = await tx.packagingOrder.updateMany({
+      where: { id, status: { notIn: ["completed", "cancelled"] } },
+      data: { status: "completed" },
+    });
+    if (claimed.count === 0) throw new UserError("This order is already completed or cancelled.");
+
     const order = await tx.packagingOrder.findUniqueOrThrow({ where: { id } });
 
     const outputBatch = await tx.batch.create({
       data: {
-        batchNo: `${order.orderNo}-OUT`,
+        batchNo: await generateBatchNo(tx, "packaging"),
         batchType: "packaging",
         materialId: order.finishedProductId,
         warehouseId: data.output.warehouseId,
         quantity: data.output.quantity,
         uomId: data.output.uomId,
-        unitCost: data.output.unitCost,
         manufactureDate: data.output.manufactureDate,
         expiryDate: data.output.expiryDate,
         qcResult: data.output.qcResult,
@@ -140,12 +148,9 @@ export function completePackagingOrder(id: string, data: PackagingOrderCompletio
         uomId: data.output.uomId,
         source: "packaging",
         sourceReferenceId: order.id,
-        unitCost: data.output.unitCost,
         createdBy: data.completedBy,
       },
     });
-
-    await tx.packagingOrder.update({ where: { id: order.id }, data: { status: "completed" } });
 
     return tx.packagingOrder.findUniqueOrThrow({ where: { id: order.id }, include });
   });

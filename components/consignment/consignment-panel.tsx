@@ -12,7 +12,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { consignmentSchema, type ConsignmentFormValues } from "@/lib/validation/consignments";
 import { paymentMethodValues, type PaymentFormValues } from "@/lib/validation/payments";
 import { returnQualityStatusValues } from "@/lib/validation/consignment-returns";
-import { fetchJson } from "@/lib/http";
+import { fetchJson, errorMessage } from "@/lib/http";
 
 const SYSTEM_WAREHOUSE_NAMES = new Set(["Damaged Stock", "Waste Stock"]);
 
@@ -143,7 +143,7 @@ export function ConsignmentPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save consignment. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save consignment. Check the fields and try again."));
       return;
     }
 
@@ -321,13 +321,14 @@ function ConsignmentDetail({ consignment, onChanged }: { consignment: Consignmen
   const [paymentsRefreshToken, setPaymentsRefreshToken] = useState(0);
 
   async function deliver() {
+    if (!confirm(`Deliver ${consignment.consignmentNumber}? Stock moves to the retailer and they are billed the full value.`)) return;
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/consignments/${consignment.id}/deliver`, { method: "POST" });
     setBusy(false);
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Could not deliver consignment.");
+      setError(typeof body?.error === "string" ? body.error : "Could not deliver consignment.");
       return;
     }
     await onChanged();
@@ -488,7 +489,7 @@ function RecordSaleForm({ consignment, onDone }: { consignment: Consignment; onD
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Could not record sale.");
+      setError(typeof body?.error === "string" ? body.error : "Could not record sale.");
       return;
     }
     await onDone();
@@ -553,7 +554,7 @@ function RecordReturnForm({ consignment, onDone }: { consignment: Consignment; o
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Could not record return.");
+      setError(typeof body?.error === "string" ? body.error : "Could not record return.");
       return;
     }
     await onDone();
@@ -619,7 +620,7 @@ function RecordPaymentForm({ consignment, onDone }: { consignment: Consignment; 
     });
 
     if (!res.ok) {
-      setError("Could not record payment.");
+      setError(await errorMessage(res, "Could not record payment."));
       return;
     }
     await onDone();

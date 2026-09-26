@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Select } from "@/components/ui/select";
-import { fetchJson } from "@/lib/http";
+import { fetchJson, errorMessage } from "@/lib/http";
 
 interface Retailer {
   id: string;
@@ -50,7 +50,7 @@ export function SalesRepsPanel() {
     setSavingId(null);
 
     if (!res.ok) {
-      setError("Could not reassign retailer.");
+      setError(await errorMessage(res, "Could not reassign retailer."));
       return;
     }
     await load();

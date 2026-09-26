@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { purchaseOrderSchema, type PurchaseOrderFormValues } from "@/lib/validation/purchase-orders";
+import { errorMessage } from "@/lib/http";
 
 interface Material {
   id: string;
@@ -146,7 +147,7 @@ export function PurchaseOrderPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save purchase order. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save purchase order. Check the fields and try again."));
       return;
     }
 
@@ -274,7 +275,7 @@ export function PurchaseOrderPanel() {
             {fields.map((field, index) => (
               <div
                 key={field.id}
-                className="grid grid-cols-1 gap-sm rounded-md border border-outline-variant p-sm sm:grid-cols-[2fr_1fr_1fr_1fr_auto]"
+                className="grid grid-cols-1 gap-sm rounded-md border border-outline-variant p-sm lg:grid-cols-[2fr_1fr_1fr_1fr_auto]"
               >
                 <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
                   Material

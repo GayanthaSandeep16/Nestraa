@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { prisma } from "@/lib/db/prisma";
 import { MODULE_KEYS, ROLE_NAMES, isModuleKey, type ModuleKey, type RoleName } from "@/lib/auth/roles";
 
@@ -48,10 +49,10 @@ export async function getAccessMatrix(): Promise<Record<RoleName, ModuleKey[]>> 
 }
 
 export async function setRoleModules(roleName: RoleName, moduleKeys: ModuleKey[]): Promise<void> {
-  if (roleName === "admin") throw new Error("The admin role's access cannot be edited");
+  if (roleName === "admin") throw new UserError("The admin role's access cannot be edited");
 
   const role = await prisma.role.findUnique({ where: { name: roleName }, select: { id: true } });
-  if (!role) throw new Error(`Unknown role: ${roleName}`);
+  if (!role) throw new UserError(`Unknown role: ${roleName}`);
 
   const perms = await prisma.permission.findMany({
     where: { code: { in: moduleKeys } },

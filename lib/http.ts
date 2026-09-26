@@ -18,3 +18,11 @@ export async function fetchJson<T>(input: string, init?: RequestInit): Promise<T
     return null;
   }
 }
+
+// The API returns `{ error: string }` for business-rule rejections and
+// `{ error: { fieldErrors } }` for schema failures — only the former is
+// displayable, so fall back to a generic message for anything else.
+export async function errorMessage(res: Response, fallback: string): Promise<string> {
+  const body = await res.json().catch(() => null);
+  return typeof body?.error === "string" ? body.error : fallback;
+}

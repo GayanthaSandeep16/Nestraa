@@ -21,14 +21,14 @@ export function ConsignmentTabs() {
 
   return (
     <div className="flex flex-col gap-md">
-      <div className="flex gap-sm">
+      <div className="flex gap-sm overflow-x-auto">
         {subTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "rounded-full px-md py-xs text-body-sm font-medium",
+              "shrink-0 whitespace-nowrap rounded-full px-md py-xs text-body-sm font-medium",
               activeTab === tab.id
                 ? "bg-primary-container text-on-primary-container"
                 : "text-on-surface-variant hover:bg-surface-container-low"

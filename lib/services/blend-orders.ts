@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { prisma } from "@/lib/db/prisma";
 import type { QcResult } from "@/lib/generated/prisma/client";
 
@@ -59,7 +60,6 @@ export interface BlendOrderCompletionInput {
     quantity: number;
     uomId: string;
     warehouseId: string;
-    unitCost?: number | null;
     manufactureDate?: Date | null;
     expiryDate?: Date | null;
     qcResult?: QcResult | null;
@@ -69,6 +69,14 @@ export interface BlendOrderCompletionInput {
 
 export function completeBlendOrder(id: string, data: BlendOrderCompletionInput) {
   return prisma.$transaction(async (tx) => {
+    // Atomically claim the order first so a double-submit (or completing a
+    // cancelled order) can't create a second output batch / double stock.
+    const claimed = await tx.blendOrder.updateMany({
+      where: { id, status: { notIn: ["completed", "cancelled"] } },
+      data: { status: "completed" },
+    });
+    if (claimed.count === 0) throw new UserError("This order is already completed or cancelled.");
+
     const order = await tx.blendOrder.findUniqueOrThrow({ where: { id }, include: { recipe: true } });
 
     const outputBatch = await tx.batch.create({
@@ -79,7 +87,6 @@ export function completeBlendOrder(id: string, data: BlendOrderCompletionInput) 
         warehouseId: data.output.warehouseId,
         quantity: data.output.quantity,
         uomId: data.output.uomId,
-        unitCost: data.output.unitCost,
         manufactureDate: data.output.manufactureDate,
         expiryDate: data.output.expiryDate,
         qcResult: data.output.qcResult,
@@ -131,12 +138,9 @@ export function completeBlendOrder(id: string, data: BlendOrderCompletionInput) 
         uomId: data.output.uomId,
         source: "blend",
         sourceReferenceId: order.id,
-        unitCost: data.output.unitCost,
         createdBy: data.completedBy,
       },
     });
-
-    await tx.blendOrder.update({ where: { id: order.id }, data: { status: "completed" } });
 
     return tx.blendOrder.findUniqueOrThrow({ where: { id: order.id }, include });
   });

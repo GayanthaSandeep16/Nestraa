@@ -14,7 +14,7 @@ export default async function ConsignmentsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-lg p-lg">
+    <div className="flex flex-col gap-lg p-md md:p-lg">
       <h1 className="text-headline-lg text-on-surface">Consignments</h1>
       <ConsignmentTabs />
     </div>

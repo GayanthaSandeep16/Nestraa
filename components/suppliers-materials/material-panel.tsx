@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { materialSchema, materialTypeValues, type MaterialFormValues } from "@/lib/validation/materials";
+import { errorMessage } from "@/lib/http";
 
 const materialTypeLabels: Record<(typeof materialTypeValues)[number], string> = {
   raw: "Raw",
@@ -136,7 +137,7 @@ export function MaterialPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save material. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save material. Check the fields and try again."));
       return;
     }
 

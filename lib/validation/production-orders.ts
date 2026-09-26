@@ -33,7 +33,6 @@ export const productionOrderCompletionSchema = z.object({
     quantity: z.coerce.number().positive("Output quantity must be greater than 0"),
     uomId: z.string().uuid("Unit of measure is required"),
     warehouseId: z.string().uuid("Warehouse is required"),
-    unitCost: z.coerce.number().min(0).optional(),
     manufactureDate: optionalDate(),
     expiryDate: optionalDate(),
     qcResult: z

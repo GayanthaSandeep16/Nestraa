@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { prisma } from "@/lib/db/prisma";
 import type { QcResult } from "@/lib/generated/prisma/client";
 
@@ -33,7 +34,7 @@ function generateOrderNo() {
 export async function createProductionOrder(data: ProductionOrderInput) {
   const process = await prisma.productionProcessDefinition.findUniqueOrThrow({ where: { id: data.processId } });
   if (!process.outputMaterialId) {
-    throw new Error("Selected process has no output material defined");
+    throw new UserError("Selected process has no output material defined");
   }
 
   const order = await prisma.productionOrder.create({
@@ -52,7 +53,7 @@ export async function createProductionOrder(data: ProductionOrderInput) {
 }
 
 export function cancelProductionOrder(id: string) {
-  return prisma.productionOrder.update({ where: { id }, data: { status: "cancelled" } });
+  return prisma.productionOrder.update({ where: { id, status: "draft" }, data: { status: "cancelled" } });
 }
 
 export interface ProductionOrderInputBatch {
@@ -67,7 +68,6 @@ export interface ProductionOrderCompletionInput {
     quantity: number;
     uomId: string;
     warehouseId: string;
-    unitCost?: number | null;
     manufactureDate?: Date | null;
     expiryDate?: Date | null;
     qcResult?: QcResult | null;
@@ -82,6 +82,14 @@ export interface ProductionOrderCompletionInput {
 
 export function completeProductionOrder(id: string, data: ProductionOrderCompletionInput) {
   return prisma.$transaction(async (tx) => {
+    // Atomically claim the order first so a double-submit (or completing a
+    // cancelled order) can't create a second output batch / double stock.
+    const claimed = await tx.productionOrder.updateMany({
+      where: { id, status: { notIn: ["completed", "cancelled"] } },
+      data: { status: "completed" },
+    });
+    if (claimed.count === 0) throw new UserError("This order is already completed or cancelled.");
+
     const order = await tx.productionOrder.findUniqueOrThrow({ where: { id }, include: { process: true } });
 
     const outputBatch = await tx.batch.create({
@@ -92,7 +100,6 @@ export function completeProductionOrder(id: string, data: ProductionOrderComplet
         warehouseId: data.output.warehouseId,
         quantity: data.output.quantity,
         uomId: data.output.uomId,
-        unitCost: data.output.unitCost,
         manufactureDate: data.output.manufactureDate,
         expiryDate: data.output.expiryDate,
         qcResult: data.output.qcResult,
@@ -149,12 +156,9 @@ export function completeProductionOrder(id: string, data: ProductionOrderComplet
         uomId: data.output.uomId,
         source: "production",
         sourceReferenceId: order.id,
-        unitCost: data.output.unitCost,
         createdBy: data.completedBy,
       },
     });
-
-    await tx.productionOrder.update({ where: { id: order.id }, data: { status: "completed" } });
 
     return tx.productionOrder.findUniqueOrThrow({ where: { id: order.id }, include });
   });

@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { salesOrderSchema, type SalesOrderFormValues } from "@/lib/validation/sales-orders";
+import { errorMessage } from "@/lib/http";
 
 interface Customer {
   id: string;
@@ -118,12 +119,21 @@ export function SalesOrderPanel() {
     const customerId = createForm.watch("customerId");
     if (!customerId || !materialId) return;
     if (Number(createForm.watch(`items.${index}.unitPrice`)) > 0) return;
+
     const res = await fetch(
       `/api/customer-pricing/effective?customerId=${customerId}&materialId=${materialId}`
     );
-    if (!res.ok) return;
-    const { unitPrice } = await res.json();
-    if (unitPrice) createForm.setValue(`items.${index}.unitPrice`, Number(unitPrice));
+    const { unitPrice } = res.ok ? await res.json() : { unitPrice: null };
+    if (unitPrice) {
+      createForm.setValue(`items.${index}.unitPrice`, Number(unitPrice));
+      return;
+    }
+
+    // No customer-specific price — fall back to the base price set in Cost Management.
+    const costRes = await fetch(`/api/product-cost/effective?materialId=${materialId}`);
+    if (!costRes.ok) return;
+    const { unitPrice: baseUnitPrice } = await costRes.json();
+    if (baseUnitPrice) createForm.setValue(`items.${index}.unitPrice`, Number(baseUnitPrice));
   }
 
   function openCreateForm() {
@@ -146,7 +156,7 @@ export function SalesOrderPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save sales order. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save sales order. Check the fields and try again."));
       return;
     }
 
@@ -260,7 +270,7 @@ export function SalesOrderPanel() {
             </div>
 
             {fields.map((field, index) => (
-              <div key={field.id} className="grid grid-cols-1 gap-sm rounded-md border border-outline-variant p-sm sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+              <div key={field.id} className="grid grid-cols-1 gap-sm rounded-md border border-outline-variant p-sm lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                 <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
                   Product
                   <Select

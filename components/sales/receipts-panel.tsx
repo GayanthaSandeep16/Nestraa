@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { paymentMethodValues } from "@/lib/validation/payments";
+import { errorMessage } from "@/lib/http";
 
 interface Invoice {
   id: string;
@@ -49,7 +50,6 @@ export function ReceiptsPanel() {
   const [draft, setDraft] = useState({
     amount: "",
     paymentMethod: "cash" as (typeof paymentMethodValues)[number],
-    paymentDate: new Date().toLocaleDateString("en-CA"),
     referenceNumber: "",
     notes: "",
   });
@@ -72,7 +72,6 @@ export function ReceiptsPanel() {
     setDraft({
       amount: String(balance(invoice) > 0 ? balance(invoice).toFixed(2) : ""),
       paymentMethod: "cash",
-      paymentDate: new Date().toLocaleDateString("en-CA"),
       referenceNumber: "",
       notes: "",
     });
@@ -94,12 +93,11 @@ export function ReceiptsPanel() {
         paymentMethod: draft.paymentMethod,
         referenceNumber: draft.referenceNumber,
         notes: draft.notes,
-        ...(draft.paymentDate ? { paymentDate: draft.paymentDate } : {}),
       }),
     });
     setSaving(false);
     if (!res.ok) {
-      setFormError("Could not record the receipt. Check the amount and try again.");
+      setFormError(await errorMessage(res, "Could not record the receipt. Check the amount and try again."));
       return;
     }
     const payment = await res.json();
@@ -229,15 +227,6 @@ export function ReceiptsPanel() {
                   </option>
                 ))}
               </Select>
-            </label>
-
-            <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
-              Date
-              <Input
-                type="date"
-                value={draft.paymentDate}
-                onChange={(e) => setDraft((d) => ({ ...d, paymentDate: e.target.value }))}
-              />
             </label>
 
             <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">

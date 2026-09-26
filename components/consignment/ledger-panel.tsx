@@ -44,8 +44,6 @@ export function LedgerPanel() {
     fetchJson<Retailer[]>("/api/retailers").then((data) => setRetailers(data ?? []));
   }, []);
 
-  useEffect(() => setPage(1), [selectedRetailerId]);
-
   useEffect(() => {
     if (!selectedRetailerId) return;
 
@@ -73,7 +71,7 @@ export function LedgerPanel() {
       <div className="flex items-center justify-between gap-md">
         <label className="flex flex-1 flex-col gap-xs text-label-md text-on-surface-variant sm:max-w-xs">
           Retailer
-          <Select value={selectedRetailerId} onChange={(e) => setSelectedRetailerId(e.target.value)}>
+          <Select value={selectedRetailerId} onChange={(e) => { setSelectedRetailerId(e.target.value); setPage(1); }}>
             <option value="">Select retailer…</option>
             {retailers.map((r) => (
               <option key={r.id} value={r.id}>

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { grnSchema, processingPathValues, qcResultValues, type GrnFormValues } from "@/lib/validation/grns";
+import { errorMessage } from "@/lib/http";
 
 interface Material {
   id: string;
@@ -201,7 +202,7 @@ export function GrnPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save GRN. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save GRN. Check the fields and try again."));
       return;
     }
 
@@ -296,7 +297,7 @@ export function GrnPanel() {
             {fields.map((field, index) => (
               <div key={field.id} className="flex flex-col gap-sm rounded-md border border-outline-variant p-sm">
                 <input type="hidden" {...register(`items.${index}.poItemId` as const)} />
-                <div className="grid grid-cols-1 gap-sm sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+                <div className="grid grid-cols-1 gap-sm lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                   <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
                     Material
                     <Select

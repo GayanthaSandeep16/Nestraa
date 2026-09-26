@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { productSchema, type ProductFormValues } from "@/lib/validation/products";
+import { errorMessage } from "@/lib/http";
 
 interface Product {
   id: string;
@@ -127,7 +128,7 @@ export function ProductPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save product. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save product. Check the fields and try again."));
       return;
     }
 

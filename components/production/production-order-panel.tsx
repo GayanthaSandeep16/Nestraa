@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { qcResultValues } from "@/lib/validation/grns";
+import { errorMessage } from "@/lib/http";
 import {
   productionOrderSchema,
   productionOrderCompletionSchema,
@@ -165,7 +166,7 @@ export function ProductionOrderPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save production order. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save production order. Check the fields and try again."));
       return;
     }
 
@@ -212,7 +213,7 @@ export function ProductionOrderPanel() {
     });
 
     if (!res.ok) {
-      setCompletionError("Could not complete the order. Check the fields and try again.");
+      setCompletionError(await errorMessage(res, "Could not complete the order. Check the fields and try again."));
       return;
     }
 
@@ -420,11 +421,6 @@ export function ProductionOrderPanel() {
                     </option>
                   ))}
                 </Select>
-              </label>
-
-              <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
-                Unit Cost
-                <Input type="number" min={0} step="0.0001" {...completionForm.register("output.unitCost")} />
               </label>
 
               <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">

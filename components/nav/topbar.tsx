@@ -35,11 +35,11 @@ export function Topbar({ userName, roleName }: { userName: string; roleName: str
   }, [query]);
 
   return (
-    <header className="h-16 flex items-center justify-between gap-md px-lg border-b border-outline-variant bg-surface-container-lowest">
-      <h1 className="text-headline-md text-on-surface">{title}</h1>
+    <header className="h-16 flex items-center justify-between gap-md pl-16 pr-md md:px-lg border-b border-outline-variant bg-surface-container-lowest">
+      <h1 className="text-headline-md text-on-surface truncate">{title}</h1>
 
       <div className="flex items-center gap-md">
-        <div className="relative">
+        <div className="relative hidden lg:block">
           <Search
             size={16}
             className="absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant"

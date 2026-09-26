@@ -356,19 +356,19 @@ async function main() {
   const chiliOrder = await createProductionOrder({ processId: chiliGrinding.id, plannedQuantity: 100 });
   await completeProductionOrder(chiliOrder.id, {
     inputs: [{ batchId: batchByMaterial.get(rawChili.id)!, quantity: 100, uomId: kg }],
-    output: { quantity: 90, uomId: kg, warehouseId: mainWarehouse.id, unitCost: 950, qcResult: "pass" },
+    output: { quantity: 90, uomId: kg, warehouseId: mainWarehouse.id, qcResult: "pass" },
   });
 
   const turmericOrder = await createProductionOrder({ processId: turmericGrinding.id, plannedQuantity: 100 });
   await completeProductionOrder(turmericOrder.id, {
     inputs: [{ batchId: batchByMaterial.get(rawTurmeric.id)!, quantity: 100, uomId: kg }],
-    output: { quantity: 92, uomId: kg, warehouseId: mainWarehouse.id, unitCost: 700, qcResult: "pass" },
+    output: { quantity: 92, uomId: kg, warehouseId: mainWarehouse.id, qcResult: "pass" },
   });
 
   const corianderOrder = await createProductionOrder({ processId: corianderGrinding.id, plannedQuantity: 100 });
   await completeProductionOrder(corianderOrder.id, {
     inputs: [{ batchId: batchByMaterial.get(rawCoriander.id)!, quantity: 100, uomId: kg }],
-    output: { quantity: 88, uomId: kg, warehouseId: mainWarehouse.id, unitCost: 630, qcResult: "pass" },
+    output: { quantity: 88, uomId: kg, warehouseId: mainWarehouse.id, qcResult: "pass" },
   });
 
   // Left in "draft" on purpose — lets you exercise the Production Orders
@@ -397,7 +397,7 @@ async function main() {
       { materialId: groundTurmeric.id, batchId: groundTurmericBatch.id, quantity: 40, uomId: kg },
       { materialId: groundCoriander.id, batchId: groundCorianderBatch.id, quantity: 30, uomId: kg },
     ],
-    output: { quantity: 98, uomId: kg, warehouseId: mainWarehouse.id, unitCost: 780, qcResult: "pass" },
+    output: { quantity: 98, uomId: kg, warehouseId: mainWarehouse.id, qcResult: "pass" },
   });
 
   await createBlendOrder({ recipeId: curryRecipe.id, plannedQuantity: 50 });
@@ -417,7 +417,7 @@ async function main() {
   });
   await completePackagingOrder(packagingOrder.id, {
     inputs: [{ batchId: blendBatch.id, quantity: 25, uomId: kg }],
-    output: { quantity: 100, uomId: pcs, warehouseId: mainWarehouse.id, unitCost: 195, qcResult: "pass" },
+    output: { quantity: 100, uomId: pcs, warehouseId: mainWarehouse.id, qcResult: "pass" },
     barcode: "8901234500017",
   });
 

@@ -16,7 +16,7 @@ export default async function Home() {
   ];
 
   return (
-    <div className="flex flex-1 flex-col gap-lg bg-surface p-xl">
+    <div className="flex flex-1 flex-col gap-lg bg-surface p-md md:p-xl">
       <h1 className="font-display text-display text-on-surface">Nestraa</h1>
 
       <div className="grid grid-cols-1 gap-md sm:grid-cols-3">

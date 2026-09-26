@@ -374,6 +374,7 @@ model Material {
   packagingOrdersAsProcessed PackagingOrder[]              @relation("PackagingProcessedMaterial")
   packagingOrdersAsFinished  PackagingOrder[]              @relation("PackagingFinishedProduct")
   customerPricing            CustomerPricing[]
+  productCosts               ProductCost[]
   salesOrderItems            SalesOrderItem[]
   salesInvoiceItems          SalesInvoiceItem[]
   salesReturnItems           SalesReturnItem[]
@@ -832,6 +833,28 @@ model CustomerPricing {
   // 20260909000000_extend_sales_module migration.
   @@index([customerId, materialId, effectiveFrom], map: "idx_customer_pricing_lookup")
   @@map("customer_pricing")
+}
+
+// Base cost + selling price per finished-good product, independent of any
+// customer. CustomerPricing (above) overrides this when it has an open row
+// for the same material; this is the fallback. Deliberately NOT the same
+// thing as Batch.unitCost (a per-batch, ledger-derived snapshot) — this is a
+// manually-set standard cost/price, not derived from production. See NOTES.md.
+model ProductCost {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materialId    String    @map("material_id") @db.Uuid
+  unitCost      Decimal   @map("unit_cost") @db.Decimal(14, 4)
+  unitPrice     Decimal   @map("unit_price") @db.Decimal(14, 4)
+  effectiveFrom DateTime  @default(now()) @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+
+  material Material @relation(fields: [materialId], references: [id])
+
+  // Partial unique index "product_cost_open_price_key" (one open row per
+  // material, WHERE effective_to IS NULL) is SQL-only — see the
+  // <migration>_add_product_cost migration, mirrors customer_pricing_open_price_key.
+  @@index([materialId, effectiveFrom], map: "idx_product_cost_lookup")
+  @@map("product_costs")
 }
 
 model SalesOrder {

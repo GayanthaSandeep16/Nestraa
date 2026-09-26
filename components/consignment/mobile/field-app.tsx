@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Search, FileText, Banknote, PackageCheck, Undo2, Truck } from "lucide-react";
-import { fetchJson } from "@/lib/http";
+import { fetchJson, errorMessage } from "@/lib/http";
 import { useDraftStorage } from "@/lib/hooks/use-draft-storage";
 import { paymentMethodValues } from "@/lib/validation/payments";
 import { returnQualityStatusValues } from "@/lib/validation/consignment-returns";
@@ -249,13 +249,14 @@ function ConsignmentScreen({
   const [error, setError] = useState<string | null>(null);
 
   async function deliver() {
+    if (!confirm(`Deliver ${consignment.consignmentNumber}? Stock moves to the retailer and they are billed the full value.`)) return;
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/consignments/${consignment.id}/deliver`, { method: "POST" });
     setBusy(false);
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Could not deliver consignment.");
+      setError(typeof body?.error === "string" ? body.error : "Could not deliver consignment.");
       return;
     }
     await onChanged();
@@ -393,7 +394,7 @@ function RecordSaleForm({ consignment, onDone }: { consignment: Consignment; onD
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Could not record sale.");
+      setError(typeof body?.error === "string" ? body.error : "Could not record sale.");
       return;
     }
     clearDraft();
@@ -458,7 +459,7 @@ function RecordReturnForm({ consignment, onDone }: { consignment: Consignment; o
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Could not record return.");
+      setError(typeof body?.error === "string" ? body.error : "Could not record return.");
       return;
     }
     clearDraft();
@@ -538,7 +539,7 @@ function RecordPaymentForm({ consignment, onDone }: { consignment: Consignment; 
     setSubmitting(false);
 
     if (!res.ok) {
-      setError("Could not record payment.");
+      setError(await errorMessage(res, "Could not record payment."));
       return;
     }
     clearDraft();

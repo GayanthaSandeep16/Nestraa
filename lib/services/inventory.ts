@@ -1,5 +1,30 @@
-import { Prisma } from "@/lib/generated/prisma/client";
+import { Prisma, type BatchType, type PrismaClient } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
+
+const BATCH_NO_PREFIX: Record<BatchType, string> = {
+  grn: "GB",
+  production: "PB",
+  blend: "BB",
+  packaging: "PKB",
+  finished_goods: "FG",
+};
+
+// ponytail: sequence via COUNT in-transaction, not a dedicated counter table —
+// fine at current volume; switch to a `batch_sequences` table if concurrent
+// completions of the same batch type ever produce collisions.
+export async function generateBatchNo(
+  tx: Pick<PrismaClient, "batch">,
+  batchType: BatchType,
+) {
+  const year = new Date().getFullYear();
+  const prefix = `${BATCH_NO_PREFIX[batchType]}-${year}-`;
+
+  const count = await tx.batch.count({
+    where: { batchType, batchNo: { startsWith: prefix } },
+  });
+
+  return `${prefix}${String(count + 1).padStart(5, "0")}`;
+}
 
 interface CurrentStockRow {
   material_id: string;
@@ -180,14 +205,65 @@ export async function getBatchLineage(batchId: string) {
     SELECT batch_id, batch_no, depth, 'output'::text AS direction, quantity FROM outputs
   `;
 
+  const lineage = rows.map((row) => ({
+    batchId: row.batch_id,
+    batchNo: row.batch_no,
+    depth: row.depth,
+    direction: row.direction,
+    quantity: row.quantity,
+  }));
+
+  // Upstream batch ids (this batch plus anything it was built from) resolve
+  // the originating supplier via GRN; downstream batch ids (this batch plus
+  // anything made from it) resolve who it was sold/delivered to.
+  const upstreamBatchIds = [batchId, ...lineage.filter((l) => l.direction === "input").map((l) => l.batchId)];
+  const downstreamBatchIds = [batchId, ...lineage.filter((l) => l.direction === "output").map((l) => l.batchId)];
+
+  const [grnItems, salesInvoiceItems, consignmentItems] = await Promise.all([
+    prisma.grnItem.findMany({
+      where: { batchId: { in: upstreamBatchIds } },
+      include: { grn: { include: { supplier: true, po: true } }, batch: true },
+    }),
+    prisma.salesInvoiceItem.findMany({
+      where: { batchId: { in: downstreamBatchIds } },
+      include: { invoice: { include: { customer: true } }, batch: true },
+    }),
+    prisma.consignmentItem.findMany({
+      where: { batchId: { in: downstreamBatchIds } },
+      include: { consignment: { include: { customer: true } }, batch: true },
+    }),
+  ]);
+
   return {
     batch,
-    lineage: rows.map((row) => ({
-      batchId: row.batch_id,
-      batchNo: row.batch_no,
-      depth: row.depth,
-      direction: row.direction,
-      quantity: row.quantity,
+    lineage,
+    suppliers: grnItems.map((item) => ({
+      batchId: item.batchId,
+      batchNo: item.batch?.batchNo ?? null,
+      supplierName: item.grn.supplier.name,
+      grnNo: item.grn.grnNo,
+      grnDate: item.grn.receivedAt,
+      poNo: item.grn.po?.poNo ?? null,
     })),
+    sellers: [
+      ...salesInvoiceItems.map((item) => ({
+        batchId: item.batchId,
+        batchNo: item.batch?.batchNo ?? null,
+        type: "sale" as const,
+        customerName: item.invoice.customer.name,
+        referenceNo: item.invoice.invoiceNo,
+        date: item.invoice.invoiceDate,
+        quantity: item.quantity,
+      })),
+      ...consignmentItems.map((item) => ({
+        batchId: item.batchId,
+        batchNo: item.batch?.batchNo ?? null,
+        type: "consignment" as const,
+        customerName: item.consignment.customer.name,
+        referenceNo: item.consignment.consignmentNumber,
+        date: item.consignment.deliveryDate,
+        quantity: item.quantityDelivered,
+      })),
+    ],
   };
 }

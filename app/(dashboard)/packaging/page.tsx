@@ -2,7 +2,7 @@ import { PackagingOrderPanel } from "@/components/packaging/packaging-order-pane
 
 export default function PackagingPage() {
   return (
-    <div className="flex flex-col gap-lg p-lg">
+    <div className="flex flex-col gap-lg p-md md:p-lg">
       <h1 className="text-headline-md text-on-surface">Packaging Orders</h1>
       <PackagingOrderPanel />
     </div>

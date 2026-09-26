@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { customerSchema, customerTypeValues, type CustomerFormValues } from "@/lib/validation/customers";
+import { errorMessage } from "@/lib/http";
 
 interface Customer extends CustomerFormValues {
   id: string;
@@ -109,7 +110,7 @@ export function CustomerPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save customer. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save customer. Check the fields and try again."));
       return;
     }
 

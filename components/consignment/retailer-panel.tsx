@@ -10,7 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { retailerSchema, type RetailerFormValues } from "@/lib/validation/retailers";
-import { fetchJson } from "@/lib/http";
+import { fetchJson, errorMessage } from "@/lib/http";
 
 interface Retailer {
   id: string;
@@ -128,7 +128,7 @@ export function RetailerPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save retailer. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save retailer. Check the fields and try again."));
       return;
     }
 

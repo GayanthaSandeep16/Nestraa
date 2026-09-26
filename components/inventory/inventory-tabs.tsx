@@ -18,15 +18,15 @@ export function InventoryTabs() {
   const [activeTab, setActiveTab] = useState<Tab>("stock");
 
   return (
-    <div className="flex flex-col gap-lg p-lg">
-      <div className="flex gap-sm border-b border-outline-variant">
+    <div className="flex flex-col gap-lg p-md md:p-lg">
+      <div className="flex gap-sm overflow-x-auto border-b border-outline-variant">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "px-md py-sm text-body-md font-medium",
+              "shrink-0 whitespace-nowrap px-md py-sm text-body-md font-medium",
               activeTab === tab.id
                 ? "border-b-2 border-primary text-primary"
                 : "text-on-surface-variant hover:text-on-surface"

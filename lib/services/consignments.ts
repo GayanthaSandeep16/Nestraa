@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { Prisma } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { appendLedgerEntry } from "@/lib/services/retailer-ledger";
@@ -69,7 +70,7 @@ export function deliverConsignment(id: string, actorId?: string | null) {
     });
 
     if (consignment.status !== "draft") {
-      throw new Error("Only draft consignments can be delivered");
+      throw new UserError("Only draft consignments can be delivered");
     }
 
     let totalValue = new Prisma.Decimal(0);
@@ -124,7 +125,7 @@ export function recordConsignmentSale(
   return prisma.$transaction(async (tx) => {
     const consignment = await tx.consignment.findUniqueOrThrow({ where: { id: consignmentId } });
     if (consignment.status === "draft" || consignment.status === "cancelled") {
-      throw new Error("Consignment has not been delivered yet");
+      throw new UserError("Consignment has not been delivered yet");
     }
 
     for (const entry of items) {
@@ -135,7 +136,7 @@ export function recordConsignmentSale(
 
       const remaining = item.quantityDelivered.sub(item.quantitySold).sub(item.quantityReturned);
       if (remaining.lt(entry.quantity)) {
-        throw new Error(`Sale quantity exceeds remaining held stock for ${item.material.name}`);
+        throw new UserError(`Sale quantity exceeds remaining held stock for ${item.material.name}`);
       }
 
       await tx.inventoryMovement.create({

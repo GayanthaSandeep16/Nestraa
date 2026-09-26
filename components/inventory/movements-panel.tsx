@@ -52,9 +52,6 @@ export function MovementsPanel() {
   const [pageCount, setPageCount] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Any filter change resets to page 1.
-  useEffect(() => setPage(1), [materialId, warehouseId, direction]);
-
   useEffect(() => {
     fetch("/api/materials")
       .then((res) => res.json())
@@ -102,7 +99,7 @@ export function MovementsPanel() {
   return (
     <div className="flex flex-col gap-md">
       <div className="grid grid-cols-1 gap-sm sm:grid-cols-3">
-        <Select value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
+        <Select value={materialId} onChange={(e) => { setMaterialId(e.target.value); setPage(1); }}>
           <option value="">All materials</option>
           {materials.map((material) => (
             <option key={material.id} value={material.id}>
@@ -111,7 +108,7 @@ export function MovementsPanel() {
           ))}
         </Select>
 
-        <Select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+        <Select value={warehouseId} onChange={(e) => { setWarehouseId(e.target.value); setPage(1); }}>
           <option value="">All warehouses</option>
           {warehouses.map((warehouse) => (
             <option key={warehouse.id} value={warehouse.id}>
@@ -120,7 +117,7 @@ export function MovementsPanel() {
           ))}
         </Select>
 
-        <Select value={direction} onChange={(e) => setDirection(e.target.value)}>
+        <Select value={direction} onChange={(e) => { setDirection(e.target.value); setPage(1); }}>
           <option value="">All directions</option>
           <option value="in">In</option>
           <option value="out">Out</option>

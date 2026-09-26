@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { recipeSchema, type RecipeFormValues } from "@/lib/validation/recipes";
+import { errorMessage } from "@/lib/http";
 
 interface RecipeIngredient {
   id: string;
@@ -162,7 +163,7 @@ export function RecipePanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save recipe. Each ingredient needs either a percentage or a fixed quantity, not both.");
+      setFormError(await errorMessage(res, "Could not save recipe. Each ingredient needs either a percentage or a fixed quantity, not both."));
       return;
     }
 
@@ -288,7 +289,7 @@ export function RecipePanel() {
             {errors.ingredients?.message && <p className="text-body-sm text-error">{errors.ingredients.message}</p>}
 
             {fields.map((field, index) => (
-              <div key={field.id} className="grid grid-cols-1 gap-sm rounded-md border border-outline-variant p-sm sm:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+              <div key={field.id} className="grid grid-cols-1 gap-sm rounded-md border border-outline-variant p-sm lg:grid-cols-[2fr_1fr_1fr_1fr_auto]">
                 <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
                   Material
                   <Select {...register(`ingredients.${index}.materialId` as const)} error={!!errors.ingredients?.[index]?.materialId}>

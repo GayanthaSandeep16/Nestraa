@@ -64,7 +64,7 @@ export function DashboardPanel() {
       .then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => null);
-          setError(body?.error ?? "Could not load dashboard metrics.");
+          setError(typeof body?.error === "string" ? body.error : "Could not load dashboard metrics.");
           return;
         }
         setMetrics(await res.json());

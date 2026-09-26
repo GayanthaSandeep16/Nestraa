@@ -14,7 +14,6 @@ export const paymentSchema = z.object({
   invoiceId: optionalText(),
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   paymentMethod: z.enum(paymentMethodValues),
-  paymentDate: optionalText(),
   referenceNumber: optionalText(),
   notes: optionalText(),
 });

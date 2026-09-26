@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { processDefinitionSchema, type ProcessDefinitionFormValues } from "@/lib/validation/process-definitions";
+import { errorMessage } from "@/lib/http";
 
 interface Material {
   id: string;
@@ -111,7 +112,7 @@ export function ProcessPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save process definition. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save process definition. Check the fields and try again."));
       return;
     }
 

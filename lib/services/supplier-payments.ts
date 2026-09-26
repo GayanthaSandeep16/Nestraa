@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { prisma } from "@/lib/db/prisma";
 import type { PaymentMethod } from "@/lib/generated/prisma/client";
 import { appendSupplierLedgerEntry } from "@/lib/services/supplier-ledger";
@@ -25,7 +26,6 @@ export interface SupplierPaymentInput {
   supplierInvoiceId?: string | null;
   amount: number;
   paymentMethod: PaymentMethod;
-  paymentDate?: string | null;
   referenceNumber?: string | null;
   notes?: string | null;
 }
@@ -33,12 +33,15 @@ export interface SupplierPaymentInput {
 // Append-only — a correction is a new offsetting row, not an edit.
 export function recordSupplierPayment(data: SupplierPaymentInput, recordedBy?: string | null) {
   return prisma.$transaction(async (tx) => {
-    const { paymentDate, ...rest } = data;
+    if (data.supplierInvoiceId) {
+      const invoice = await tx.supplierInvoice.findUniqueOrThrow({ where: { id: data.supplierInvoiceId } });
+      if (invoice.supplierId !== data.supplierId) throw new UserError("That invoice belongs to a different supplier.");
+    }
+
     const payment = await tx.supplierPayment.create({
       data: {
-        ...rest,
+        ...data,
         recordedBy,
-        ...(paymentDate ? { paymentDate: new Date(paymentDate) } : {}),
       },
     });
 

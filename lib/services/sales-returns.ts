@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { Prisma } from "@/lib/generated/prisma/client";
 import type { ReturnQualityStatus } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -49,12 +50,12 @@ export function createSalesReturn(data: SalesReturnInput, actorId?: string | nul
     const invoice = data.invoiceId
       ? await tx.salesInvoice.findUniqueOrThrow({
           where: { id: data.invoiceId },
-          include: { items: { include: { batch: true } } },
+          include: { items: { include: { batch: true, material: true } } },
         })
       : null;
 
     const customerId = invoice?.customerId ?? data.customerId;
-    if (!customerId) throw new Error("Invoice or customer is required");
+    if (!customerId) throw new UserError("Invoice or customer is required");
 
     const [defaultWarehouse, damagedWarehouse, wasteWarehouse] = await Promise.all([
       tx.warehouse.findFirstOrThrow({ where: { name: DEFAULT_WAREHOUSE_NAME } }),
@@ -84,7 +85,8 @@ export function createSalesReturn(data: SalesReturnInput, actorId?: string | nul
         const invoiced = invoicedByMaterial.get(entry.materialId) ?? new Prisma.Decimal(0);
         const already = returnedByMaterial.get(entry.materialId) ?? new Prisma.Decimal(0);
         if (already.add(entry.quantity).gt(invoiced)) {
-          throw new Error(`Return quantity exceeds invoiced quantity for material ${entry.materialId}`);
+          const name = invoice.items.find((line) => line.materialId === entry.materialId)?.material.name ?? "a product not on this invoice";
+          throw new UserError(`Return quantity exceeds invoiced quantity for ${name}`);
         }
       }
     }
@@ -127,7 +129,7 @@ export function createSalesReturn(data: SalesReturnInput, actorId?: string | nul
 
     for (const entry of data.items) {
       const uomId = baseUomByMaterial.get(entry.materialId);
-      if (!uomId) throw new Error(`Unknown material ${entry.materialId}`);
+      if (!uomId) throw new UserError(`Unknown material ${entry.materialId}`);
 
       const warehouseId =
         entry.qualityStatus === "good"

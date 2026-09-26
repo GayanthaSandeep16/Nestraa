@@ -5,6 +5,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
+import { errorMessage } from "@/lib/http";
 
 interface BatchDetail {
   id: string;
@@ -27,9 +28,30 @@ interface LineageNode {
   quantity: string;
 }
 
+interface SupplierNode {
+  batchId: string;
+  batchNo: string | null;
+  supplierName: string;
+  grnNo: string;
+  grnDate: string;
+  poNo: string | null;
+}
+
+interface SellerNode {
+  batchId: string;
+  batchNo: string | null;
+  type: "sale" | "consignment";
+  customerName: string;
+  referenceNo: string;
+  date: string;
+  quantity: string;
+}
+
 interface LineageResult {
   batch: BatchDetail;
   lineage: LineageNode[];
+  suppliers: SupplierNode[];
+  sellers: SellerNode[];
 }
 
 const qcTones: Record<string, StatusTone> = {
@@ -57,7 +79,7 @@ export function BatchLineagePanel() {
     setLoading(false);
 
     if (!res.ok) {
-      setError("Batch not found.");
+      setError(await errorMessage(res, "Batch not found."));
       return;
     }
 
@@ -161,6 +183,45 @@ export function BatchLineagePanel() {
                     >
                       {node.batchNo}{" "}
                       <span className="text-on-surface-variant">({node.quantity})</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
+            <div>
+              <h4 className="mb-xs text-label-lg text-on-surface">Supplier / Procurement</h4>
+              {result.suppliers.length === 0 ? (
+                <p className="text-body-sm text-on-surface-variant">No supplier found in this batch&apos;s chain.</p>
+              ) : (
+                <ul className="flex flex-col gap-xs">
+                  {result.suppliers.map((s) => (
+                    <li key={s.batchId} className="text-body-sm text-on-surface">
+                      <span className="font-medium">{s.supplierName}</span>{" "}
+                      <span className="text-on-surface-variant">
+                        — GRN {s.grnNo}
+                        {s.poNo ? `, PO ${s.poNo}` : ""}, {new Date(s.grnDate).toLocaleDateString()}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h4 className="mb-xs text-label-lg text-on-surface">Sold To / Delivered To</h4>
+              {result.sellers.length === 0 ? (
+                <p className="text-body-sm text-on-surface-variant">Not yet sold or delivered to a retailer.</p>
+              ) : (
+                <ul className="flex flex-col gap-xs">
+                  {result.sellers.map((s) => (
+                    <li key={`${s.type}-${s.referenceNo}-${s.batchId}`} className="text-body-sm text-on-surface">
+                      <span className="font-medium">{s.customerName}</span>{" "}
+                      <span className="text-on-surface-variant">
+                        — {s.type === "sale" ? "Invoice" : "Consignment"} {s.referenceNo}, {s.quantity}, {new Date(s.date).toLocaleDateString()}
+                      </span>
                     </li>
                   ))}
                 </ul>

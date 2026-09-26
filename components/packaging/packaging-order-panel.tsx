@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { qcResultValues } from "@/lib/validation/grns";
+import { errorMessage } from "@/lib/http";
 import {
   packagingOrderSchema,
   packagingOrderCompletionSchema,
@@ -40,6 +41,7 @@ interface PackagingOrder {
   processedMaterial: Material;
   finishedProduct: Material;
   packageSize: PackageSize;
+  batchDetails: { batch: { batchNo: string } }[];
 }
 
 interface AvailableBatch {
@@ -99,6 +101,7 @@ export function PackagingOrderPanel() {
   const [completingOrder, setCompletingOrder] = useState<PackagingOrder | null>(null);
   const [availableBatches, setAvailableBatches] = useState<AvailableBatch[]>([]);
   const [completionError, setCompletionError] = useState<string | null>(null);
+  const [completedBatchNo, setCompletedBatchNo] = useState<string | null>(null);
 
   const createForm = useForm<PackagingOrderFormValues>({
     resolver: zodResolver(packagingOrderSchema),
@@ -168,7 +171,7 @@ export function PackagingOrderPanel() {
     });
 
     if (!res.ok) {
-      setFormError("Could not save packaging order. Check the fields and try again.");
+      setFormError(await errorMessage(res, "Could not save packaging order. Check the fields and try again."));
       return;
     }
 
@@ -211,12 +214,14 @@ export function PackagingOrderPanel() {
     });
 
     if (!res.ok) {
-      setCompletionError("Could not complete the order. Check the fields and try again.");
+      setCompletionError(await errorMessage(res, "Could not complete the order. Check the fields and try again."));
       return;
     }
 
+    const completed: PackagingOrder = await res.json();
     closeCompleteForm();
     await loadOrders();
+    setCompletedBatchNo(completed.batchDetails[0]?.batch.batchNo ?? null);
   }
 
   const columns: DataTableColumn<PackagingOrder>[] = [
@@ -225,6 +230,13 @@ export function PackagingOrderPanel() {
     { key: "finishedProduct", header: "Finished Product", render: (order) => order.finishedProduct.name },
     { key: "packageSize", header: "Package Size", render: (order) => `${order.packageSize.name} (${order.packageSize.netWeight} ${order.packageSize.uom.code})` },
     { key: "plannedQuantity", header: "Planned Qty", render: (order) => order.plannedQuantity },
+    {
+      key: "batchNo",
+      header: "Batch #",
+      render: (order) => (
+        <span className="font-mono text-body-sm">{order.batchDetails[0]?.batch.batchNo ?? "—"}</span>
+      ),
+    },
     { key: "status", header: "Status", render: (order) => <StatusBadge label={order.status.replace(/_/g, " ")} tone={statusTones[order.status]} /> },
     {
       key: "actions",
@@ -448,11 +460,6 @@ export function PackagingOrderPanel() {
               </label>
 
               <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
-                Unit Cost
-                <Input type="number" min={0} step="0.0001" {...completionForm.register("output.unitCost")} />
-              </label>
-
-              <label className="flex flex-col gap-xs text-label-md text-on-surface-variant">
                 Manufacture Date
                 <Input type="date" {...completionForm.register("output.manufactureDate")} />
               </label>
@@ -503,6 +510,21 @@ export function PackagingOrderPanel() {
         pageCount={pageCount}
         onPageChange={setPage}
       />
+
+      {completedBatchNo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="flex flex-col items-center gap-md rounded-md border border-outline-variant bg-surface-container-lowest p-xl text-center">
+            <CheckCircle2 size={32} className="text-primary" />
+            <h2 className="text-headline-md text-on-surface">Packaging Order Completed</h2>
+            <p className="text-body-md text-on-surface-variant">
+              Batch number: <span className="font-mono text-on-surface">{completedBatchNo}</span>
+            </p>
+            <Button type="button" onClick={() => setCompletedBatchNo(null)}>
+              Done
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

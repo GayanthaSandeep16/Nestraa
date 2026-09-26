@@ -1,3 +1,4 @@
+import { UserError } from "@/lib/api/errors";
 import { prisma } from "@/lib/db/prisma";
 import type { PaymentMethod } from "@/lib/generated/prisma/client";
 import { appendLedgerEntry } from "@/lib/services/retailer-ledger";
@@ -28,7 +29,6 @@ export interface PaymentInput {
   invoiceId?: string | null;
   amount: number;
   paymentMethod: PaymentMethod;
-  paymentDate?: string | null;
   referenceNumber?: string | null;
   notes?: string | null;
 }
@@ -37,12 +37,20 @@ export interface PaymentInput {
 // edit/delete of a past payment.
 export function recordPayment(data: PaymentInput, recordedBy?: string | null) {
   return prisma.$transaction(async (tx) => {
-    const { paymentDate, ...rest } = data;
+    // The ledger credit goes to data.customerId, so the invoice/consignment it
+    // settles must belong to that same customer.
+    const [invoice, consignment] = await Promise.all([
+      data.invoiceId ? tx.salesInvoice.findUniqueOrThrow({ where: { id: data.invoiceId } }) : null,
+      data.consignmentId ? tx.consignment.findUniqueOrThrow({ where: { id: data.consignmentId } }) : null,
+    ]);
+    if ((invoice && invoice.customerId !== data.customerId) || (consignment && consignment.customerId !== data.customerId)) {
+      throw new UserError("That invoice/consignment belongs to a different customer.");
+    }
+
     const payment = await tx.payment.create({
       data: {
-        ...rest,
+        ...data,
         recordedBy,
-        ...(paymentDate ? { paymentDate: new Date(paymentDate) } : {}),
       },
     });
 

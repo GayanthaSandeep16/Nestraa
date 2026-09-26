@@ -10,6 +10,7 @@ export const MODULE_KEYS = [
   "production",
   "packaging",
   "sales",
+  "cost-management",
   "consignment",
   "reports",
   "planning",
